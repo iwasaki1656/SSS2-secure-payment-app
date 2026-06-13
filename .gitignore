@@ -1,0 +1,21 @@
+# 依存ライブラリ（Git管理から絶対に除外）
+**/node_modules/
+.pnp
+.pnp.js
+
+# 環境変数・秘密情報（相方のPC環境でそれぞれ作るため除外）
+**/.env
+**/.env.local
+**/.env.production
+**/.env.development
+
+# ビルド成果物・キャッシュ
+**/dist/
+**/.next/
+**/out/
+**/.build/
+.npm
+
+# OS固有のゴミファイル
+.DS_Store
+Thumbs.db

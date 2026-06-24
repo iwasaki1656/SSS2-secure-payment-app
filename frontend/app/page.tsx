@@ -19,14 +19,92 @@ function generateUuid(): string {
 }
 
 export default function Dashboard() {
-  // Authentication & Session
+  // ─── Theme ───────────────────────────────────────────────────────────────
+  const [isDark, setIsDark] = useState(true);
+
+  // All theme-sensitive Tailwind classes in one place
+  const t = isDark ? {
+    page:           'bg-[#0a0f1d] text-zinc-100',
+    header:         'bg-[#0e1629]/80 border-zinc-800',
+    card:           'bg-[#0e1629] border-zinc-800',
+    cardInner:      'bg-zinc-900 border-zinc-800',
+    subcard:        'bg-zinc-900/40 border-zinc-800',
+    subcardItem:    'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700',
+    input:          'bg-zinc-900 border-zinc-800 text-zinc-100',
+    inputLogin:     'bg-[#16223f] border-zinc-700 text-zinc-100',
+    inputPassword:  'bg-[#121c33] border-zinc-800 text-zinc-500',
+    inputTamper:    'bg-zinc-950 border-zinc-800 text-zinc-200',
+    inputCode:      'bg-[#070b14] border-zinc-800 text-zinc-400',
+    labelMuted:     'text-zinc-400',
+    textMuted:      'text-zinc-500',
+    textSub:        'text-zinc-300',
+    textNormal:     'text-zinc-100',
+    divider:        'border-zinc-800',
+    dividerMid:     'border-zinc-800/80',
+    btnSecondary:   'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-200',
+    btnLogout:      'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-100',
+    btnRefresh:     'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100',
+    tableHover:     'hover:bg-zinc-900/40',
+    tableHead:      'border-b border-zinc-800 text-zinc-500',
+    tableDivide:    'divide-y divide-zinc-800',
+    emptyState:     'border-2 border-dashed border-zinc-800 text-zinc-500',
+    balanceCard:    'bg-zinc-900 border-zinc-800',
+    idempotency:    'bg-zinc-950/60 border-zinc-800',
+    idempotencyVal: 'bg-[#070b14] border-zinc-800 text-zinc-400',
+    auditBlock:     'bg-zinc-900/60 border-zinc-800',
+    blockTag:       'bg-zinc-800 border-zinc-700 text-zinc-500',
+    chainArrow:     'bg-[#0a0f1d] border-zinc-800 text-zinc-600',
+    badge:          'bg-zinc-800 border-zinc-700 text-zinc-400',
+    tabActive:      'border-cyan-500 text-cyan-400 bg-cyan-950/10',
+    tabInactive:    'border-transparent text-zinc-400 hover:text-zinc-200',
+    avatar:         'bg-cyan-950 border-cyan-800 text-cyan-400',
+    toggleBtn:      'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white',
+  } : {
+    page:           'bg-slate-100 text-slate-900',
+    header:         'bg-white/95 border-slate-200',
+    card:           'bg-white border-slate-200 shadow-sm',
+    cardInner:      'bg-slate-50 border-slate-200',
+    subcard:        'bg-slate-50 border-slate-200',
+    subcardItem:    'bg-white border-slate-200 hover:border-slate-300',
+    input:          'bg-white border-slate-300 text-slate-900',
+    inputLogin:     'bg-white border-slate-300 text-slate-900',
+    inputPassword:  'bg-slate-50 border-slate-200 text-slate-400',
+    inputTamper:    'bg-white border-slate-300 text-slate-800',
+    inputCode:      'bg-slate-100 border-slate-200 text-slate-500',
+    labelMuted:     'text-slate-500',
+    textMuted:      'text-slate-400',
+    textSub:        'text-slate-700',
+    textNormal:     'text-slate-900',
+    divider:        'border-slate-200',
+    dividerMid:     'border-slate-200',
+    btnSecondary:   'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-600 hover:text-slate-900',
+    btnLogout:      'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-500 hover:text-slate-800',
+    btnRefresh:     'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-500 hover:text-slate-800',
+    tableHover:     'hover:bg-slate-50',
+    tableHead:      'border-b border-slate-200 text-slate-500',
+    tableDivide:    'divide-y divide-slate-200',
+    emptyState:     'border-2 border-dashed border-slate-200 text-slate-400',
+    balanceCard:    'bg-slate-50 border-slate-200',
+    idempotency:    'bg-slate-50 border-slate-200',
+    idempotencyVal: 'bg-slate-100 border-slate-200 text-slate-500',
+    auditBlock:     'bg-white border-slate-200',
+    blockTag:       'bg-slate-100 border-slate-200 text-slate-500',
+    chainArrow:     'bg-slate-100 border-slate-200 text-slate-400',
+    badge:          'bg-slate-100 border-slate-200 text-slate-500',
+    tabActive:      'border-cyan-500 text-cyan-600 bg-cyan-50',
+    tabInactive:    'border-transparent text-slate-500 hover:text-slate-800',
+    avatar:         'bg-sky-100 border-sky-300 text-sky-600',
+    toggleBtn:      'bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700 hover:text-white',
+  };
+
+  // ─── Authentication & Session ─────────────────────────────────────────────
   const [activeUser, setActiveUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loginEmail, setLoginEmail] = useState(PRESEEDED_USERS[0].email);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  // Balances & Dynamic Calculations (Calculated from pre-seeded values + fetched payments)
+  // Balances & Dynamic Calculations
   const [userBalances, setUserBalances] = useState<Record<string, Record<string, number>>>({});
 
   // Payments & Audit state
@@ -75,20 +153,14 @@ export default function Dashboard() {
     PRESEEDED_USERS.forEach((u) => {
       balances[u.id] = { ...u.initialBalance };
     });
-
     paymentList.forEach((p) => {
       if (p.status === 'COMPLETED') {
         const val = parseFloat(p.amount) || 0;
         const cur = p.currency;
         const sender = p.senderId;
         const recipient = p.recipientId;
-
-        if (balances[sender] && balances[sender][cur] !== undefined) {
-          balances[sender][cur] -= val;
-        }
-        if (balances[recipient] && balances[recipient][cur] !== undefined) {
-          balances[recipient][cur] += val;
-        }
+        if (balances[sender] && balances[sender][cur] !== undefined) balances[sender][cur] -= val;
+        if (balances[recipient] && balances[recipient][cur] !== undefined) balances[recipient][cur] += val;
       }
     });
     setUserBalances(balances);
@@ -98,21 +170,15 @@ export default function Dashboard() {
   const fetchData = async (userId: string, token: string) => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
-
-      // Fetch payments
       const payRes = await fetch(`/api/payments?userId=${userId}&page=1&limit=50`, { headers });
       const payData = await payRes.json();
       if (payData.success) {
         setPayments(payData.data.payments || []);
         updateBalances(payData.data.payments || []);
       }
-
-      // Fetch audit logs
       const auditRes = await fetch('/api/audit/logs?page=1&limit=50', { headers });
       const auditData = await auditRes.json();
-      if (auditData.success) {
-        setAuditLogs(auditData.data.logs || []);
-      }
+      if (auditData.success) setAuditLogs(auditData.data.logs || []);
     } catch (e: any) {
       console.error('Error fetching data:', e);
     }
@@ -125,23 +191,16 @@ export default function Dashboard() {
     setLoginError(null);
     setTransferSuccess(null);
     setTransferError(null);
-
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: 's3cr3tPass!' // Hardcoded prototype login password
-        })
+        body: JSON.stringify({ email: loginEmail, password: 's3cr3tPass!' })
       });
-
       const data = await res.json();
       if (data.success) {
         setActiveUser(data.data.user);
         setAccessToken(data.data.accessToken);
-
-        // Fetch user data immediately
         await fetchData(data.data.user.id, data.data.accessToken);
       } else {
         setLoginError(data.error?.message || 'Invalid credentials');
@@ -153,34 +212,19 @@ export default function Dashboard() {
     }
   };
 
-  // Submit transfer request to NestJS backend proxy
+  // Submit transfer request
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser || !accessToken) return;
-
-    // Client-side validations
     const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) {
-      setTransferError('Validation Error: Amount must be greater than 0');
-      return;
-    }
-
-    if (activeUser.id === recipientId) {
-      setTransferError('Validation Error: Cannot transfer money to yourself');
-      return;
-    }
-
-    // Check balance
+    if (isNaN(numAmount) || numAmount <= 0) { setTransferError('Validation Error: Amount must be greater than 0'); return; }
+    if (activeUser.id === recipientId) { setTransferError('Validation Error: Cannot transfer money to yourself'); return; }
     const activeBalance = userBalances[activeUser.id]?.[currency] || 0;
-    if (numAmount > activeBalance) {
-      setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toFixed(2)} ${currency}`);
-      return;
-    }
+    if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toFixed(2)} ${currency}`); return; }
 
     setIsTransferring(true);
     setTransferError(null);
     setTransferSuccess(null);
-
     try {
       const res = await fetch('/api/payments/transfer', {
         method: 'POST',
@@ -191,22 +235,12 @@ export default function Dashboard() {
           'X-Simulate-Tamper': simulateTamper ? 'true' : 'false',
           'X-Simulate-Bad-Signature': simulateBadSignature ? 'true' : 'false'
         },
-        body: JSON.stringify({
-          senderId: activeUser.id,
-          recipientId: recipientId,
-          amount: parseFloat(amount).toFixed(2), // Ensure string decimal representation
-          currency: currency,
-          description: description
-        })
+        body: JSON.stringify({ senderId: activeUser.id, recipientId, amount: parseFloat(amount).toFixed(2), currency, description })
       });
-
       const data = await res.json();
-
       if (data.success) {
         setTransferSuccess(data.data);
-        // Refresh balances & lists
         await fetchData(activeUser.id, accessToken);
-        // Generate a new idempotency key for the next unique request
         setIdempotencyKey(generateUuid());
       } else {
         setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Transfer failed'}`);
@@ -224,24 +258,14 @@ export default function Dashboard() {
     setIsVerifying(true);
     setLedgerVerified(null);
     setTamperedLogIndex(null);
-
     try {
-      const res = await fetch('/api/audit/verify', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` }
-      });
+      const res = await fetch('/api/audit/verify', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
       const data = await res.json();
       if (data.success) {
         setLedgerVerified(data.data.verified);
-        if (!data.data.verified && data.data.tamperedIndex !== undefined) {
-          setTamperedLogIndex(data.data.tamperedIndex);
-        }
+        if (!data.data.verified && data.data.tamperedIndex !== undefined) setTamperedLogIndex(data.data.tamperedIndex);
       }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsVerifying(false);
-    }
+    } catch (err) { console.error(err); } finally { setIsVerifying(false); }
   };
 
   // Simulate internal database log tampering
@@ -249,54 +273,39 @@ export default function Dashboard() {
     if (!accessToken) return;
     setIsTampering(true);
     setTamperResult(null);
-
     try {
       const res = await fetch('/api/audit/tamper', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`
-        },
-        body: JSON.stringify({
-          index: parseInt(tamperIndexInput) || 1,
-          amount: parseFloat(tamperAmountInput).toFixed(2)
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        body: JSON.stringify({ index: parseInt(tamperIndexInput) || 1, amount: parseFloat(tamperAmountInput).toFixed(2) })
       });
       const data = await res.json();
       if (data.success) {
         setTamperResult('Ledger value corrupted successfully! Run Verification Audit to check.');
-        // Refresh local lists
         await fetchData(activeUser.id, accessToken);
       } else {
         setTamperResult(`Failed: ${data.error?.message || 'Unknown error'}`);
       }
     } catch (err: any) {
       setTamperResult(`Network error: ${err.message}`);
-    } finally {
-      setIsTampering(false);
-    }
+    } finally { setIsTampering(false); }
   };
 
   const handleLogout = () => {
-    setActiveUser(null);
-    setAccessToken(null);
-    setPayments([]);
-    setAuditLogs([]);
-    setLedgerVerified(null);
-    setTamperedLogIndex(null);
+    setActiveUser(null); setAccessToken(null); setPayments([]); setAuditLogs([]);
+    setLedgerVerified(null); setTamperedLogIndex(null);
   };
 
-  // User details helper mapping
   const getUserName = (id: string) => {
     const user = PRESEEDED_USERS.find((u) => u.id === id);
     return user ? user.name : id;
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0a0f1d] text-zinc-100 font-sans antialiased selection:bg-cyan-500 selection:text-[#0a0f1d]">
-      
+    <div className={`min-h-screen w-full font-sans antialiased selection:bg-cyan-500 selection:text-white transition-colors duration-300 ${t.page}`}>
+
       {/* Top Banner Header */}
-      <header className="border-b border-zinc-800 bg-[#0e1629]/80 backdrop-blur sticky top-0 z-50">
+      <header className={`border-b backdrop-blur sticky top-0 z-50 ${t.header}`}>
         <div className="w-full max-w-[1920px] mx-auto px-4 py-3 sm:px-6 sm:py-4 lg:px-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <div className="flex items-center gap-3">
             {/* Shield Logo */}
@@ -309,15 +318,39 @@ export default function Dashboard() {
               <h1 className="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
                 AegisPay Secure Core
               </h1>
-              <p className="text-xs text-zinc-500 font-mono">Fintech Security Testing Suite v1.0</p>
+              <p className={`text-xs font-mono ${t.textMuted}`}>Fintech Security Testing Suite v1.0</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Theme toggle button */}
+            <button
+              id="theme-toggle-btn"
+              onClick={() => setIsDark(!isDark)}
+              title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-mono font-semibold cursor-pointer select-none ${t.toggleBtn}`}
+            >
+              {isDark ? (
+                <>
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m8.66-9H21m-18 0H2m14.95-6.364l-.707.707M7.757 16.95l-.707.707M18.364 18.364l-.707-.707M6.343 6.343l-.707-.707M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
+                  </svg>
+                  <span>Light</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" />
+                  </svg>
+                  <span>Dark</span>
+                </>
+              )}
+            </button>
+
             {/* Ledger Integrity Badge */}
             {accessToken && (
               <div className="flex items-center gap-2">
-                <span className="text-xs font-mono text-zinc-400">Ledger Status:</span>
+                <span className={`text-xs font-mono ${t.labelMuted}`}>Ledger Status:</span>
                 {ledgerVerified === true ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse">
                     <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
@@ -329,8 +362,8 @@ export default function Dashboard() {
                     INTEGRITY COMPROMISED
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-zinc-800 text-zinc-400 border border-zinc-700">
-                    <span className="w-2 h-2 rounded-full bg-zinc-400"></span>
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${t.badge}`}>
+                    <span className="w-2 h-2 rounded-full bg-current opacity-60"></span>
                     UNAUDITED (READY)
                   </span>
                 )}
@@ -344,7 +377,7 @@ export default function Dashboard() {
       <main className="w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
         {!accessToken ? (
           /* Authentication Screen */
-          <div className="w-full max-w-sm sm:max-w-md mx-auto my-6 sm:my-12 bg-[#0e1629] border border-zinc-800 rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden">
+          <div className={`w-full max-w-sm sm:max-w-md mx-auto my-6 sm:my-12 border rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden ${t.card}`}>
             {/* Background Glow */}
             <div className="absolute -top-16 -left-16 w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full"></div>
             <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
@@ -356,16 +389,16 @@ export default function Dashboard() {
                 </svg>
               </div>
               <h2 className="text-xl sm:text-2xl font-bold">Simulator Login</h2>
-              <p className="text-sm text-zinc-400 mt-1">Select an account to initiate secure session</p>
+              <p className={`text-sm mt-1 ${t.labelMuted}`}>Select an account to initiate secure session</p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6 relative">
               <div>
-                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">User Identity</label>
+                <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>User Identity</label>
                 <select
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium"
+                  className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium ${t.inputLogin}`}
                 >
                   {PRESEEDED_USERS.map((user) => (
                     <option key={user.id} value={user.email}>
@@ -376,14 +409,14 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">Password</label>
+                <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Password</label>
                 <input
                   type="password"
                   disabled
                   value="s3cr3tPass!"
-                  className="w-full bg-[#121c33] border border-zinc-800 rounded-xl px-4 py-3 text-zinc-500 focus:outline-none font-mono text-sm cursor-not-allowed"
+                  className={`w-full border rounded-xl px-4 py-3 focus:outline-none font-mono text-sm cursor-not-allowed ${t.inputPassword}`}
                 />
-                <span className="text-[10px] text-zinc-500 font-mono mt-1 block">Authentication uses cryptographically signed tokens.</span>
+                <span className={`text-[10px] font-mono mt-1 block ${t.textMuted}`}>Authentication uses cryptographically signed tokens.</span>
               </div>
 
               {loginError && (
@@ -398,7 +431,7 @@ export default function Dashboard() {
               <button
                 type="submit"
                 disabled={isLoggingIn}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 focus:ring-offset-[#0a0f1d] disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer"
+                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer"
               >
                 {isLoggingIn ? (
                   <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
@@ -416,38 +449,38 @@ export default function Dashboard() {
         ) : (
           /* Unified Double-Pane Dashboard */
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 xl:gap-8">
-            
+
             {/* Sidebar Active User & Balance Cards */}
             <div className="md:col-span-5 lg:col-span-4 xl:col-span-4 space-y-4 sm:space-y-6">
-              
+
               {/* User Session Info */}
-              <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden ${t.card}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex gap-3 items-center">
-                    <div className="w-10 h-10 rounded-full bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400 font-bold">
+                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold ${t.avatar}`}>
                       {activeUser.email[0].toUpperCase()}
                     </div>
                     <div>
                       <h3 className="font-bold text-sm">{getUserName(activeUser.id)}</h3>
-                      <p className="text-xs font-mono text-zinc-400">{activeUser.email}</p>
+                      <p className={`text-xs font-mono ${t.labelMuted}`}>{activeUser.email}</p>
                     </div>
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="p-1.5 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors text-xs font-mono cursor-pointer"
+                    className={`p-1.5 border rounded-lg transition-colors text-xs font-mono cursor-pointer ${t.btnLogout}`}
                   >
                     Logout
                   </button>
                 </div>
 
-                <div className="border-t border-zinc-800 pt-4 space-y-2">
+                <div className={`border-t pt-4 space-y-2 ${t.divider}`}>
                   <div className="flex justify-between text-xs font-mono">
-                    <span className="text-zinc-500">USER ID:</span>
+                    <span className={t.textMuted}>USER ID:</span>
                     <span className="text-cyan-400 font-bold">{activeUser.id}</span>
                   </div>
                   <div className="flex flex-col text-xs font-mono">
-                    <span className="text-zinc-500 mb-1">BEARER JWT TOKEN:</span>
-                    <span className="text-[10px] break-all bg-zinc-950 p-2 rounded-lg text-zinc-400 border border-zinc-800 font-mono">
+                    <span className={`mb-1 ${t.textMuted}`}>BEARER JWT TOKEN:</span>
+                    <span className={`text-[10px] break-all p-2 rounded-lg border font-mono ${t.inputCode}`}>
                       {accessToken ? `${accessToken.substring(0, 32)}...` : 'None'}
                     </span>
                   </div>
@@ -455,13 +488,13 @@ export default function Dashboard() {
               </div>
 
               {/* Dynamic Balance Board */}
-              <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4">
-                <h3 className="text-xs font-mono uppercase text-zinc-400 tracking-wider">Account Balances</h3>
+              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
+                <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
                 <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                   {Object.entries(userBalances[activeUser.id] || {}).map(([cur, bal]) => (
-                    <div key={cur} className="bg-zinc-900 border border-zinc-800 p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center">
-                      <span className="text-[10px] sm:text-xs font-mono text-zinc-500 font-semibold">{cur}</span>
-                      <span className="text-xs sm:text-sm font-bold text-zinc-100 mt-1">
+                    <div key={cur} className={`border p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center ${t.balanceCard}`}>
+                      <span className={`text-[10px] sm:text-xs font-mono font-semibold ${t.textMuted}`}>{cur}</span>
+                      <span className="text-xs sm:text-sm font-bold mt-1">
                         {bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                     </div>
@@ -470,7 +503,7 @@ export default function Dashboard() {
               </div>
 
               {/* Interactive Transfer Form Panel */}
-              <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl">
+              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
                 <h3 className="text-md font-bold mb-4 flex items-center gap-2 text-cyan-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-20c5.303 0 9.697 4.303 9.697 9.697 0 5.303-4.303 9.697-9.697 9.697C6.697 21.697 2.3 17.303 2.3 12 2.3 6.697 6.697 2.3 12 2.3z" />
@@ -480,11 +513,11 @@ export default function Dashboard() {
 
                 <form onSubmit={handleTransfer} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-mono text-zinc-400 mb-1">Recipient</label>
+                    <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Recipient</label>
                     <select
                       value={recipientId}
                       onChange={(e) => setRecipientId(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium"
+                      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium ${t.input}`}
                     >
                       {PRESEEDED_USERS.filter((u) => u.id !== activeUser.id).map((u) => (
                         <option key={u.id} value={u.id}>
@@ -496,21 +529,21 @@ export default function Dashboard() {
 
                   <div className="grid grid-cols-3 gap-2">
                     <div className="col-span-2">
-                      <label className="block text-xs font-mono text-zinc-400 mb-1">Amount</label>
+                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Amount</label>
                       <input
                         type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="100.00"
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-mono text-zinc-400 mb-1">Currency</label>
+                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Currency</label>
                       <select
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono"
+                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
                       >
                         <option value="JPY">JPY</option>
                         <option value="USD">USD</option>
@@ -520,19 +553,19 @@ export default function Dashboard() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono text-zinc-400 mb-1">Description</label>
+                    <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Description</label>
                     <input
                       type="text"
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-zinc-100 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 ${t.input}`}
                     />
                   </div>
 
                   {/* Idempotency Key Section */}
-                  <div className="bg-zinc-950/60 p-3 rounded-xl border border-zinc-800 space-y-2">
+                  <div className={`p-3 rounded-xl border space-y-2 ${t.idempotency}`}>
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-mono text-zinc-500">IDEMPOTENCY KEY</span>
+                      <span className={`text-[10px] font-mono ${t.textMuted}`}>IDEMPOTENCY KEY</span>
                       <button
                         type="button"
                         onClick={() => setIdempotencyKey(generateUuid())}
@@ -541,7 +574,7 @@ export default function Dashboard() {
                         Regenerate
                       </button>
                     </div>
-                    <div className="text-[11px] font-mono text-zinc-400 break-all select-all font-semibold bg-[#070b14] p-2 rounded border border-zinc-800">
+                    <div className={`text-[11px] font-mono break-all select-all font-semibold p-2 rounded border ${t.idempotencyVal}`}>
                       {idempotencyKey}
                     </div>
                   </div>
@@ -587,14 +620,14 @@ export default function Dashboard() {
                         </>
                       )}
                     </button>
-                    
+
                     {/* Retry button to trigger exact replay check */}
                     <button
                       type="button"
                       disabled={isTransferring || !idempotencyKey}
                       onClick={handleTransfer}
                       title="Sends the exact same payload again with the exact same Idempotency Key"
-                      className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors text-xs font-mono font-bold cursor-pointer disabled:opacity-50"
+                      className={`px-3 py-2 border rounded-xl transition-colors text-xs font-mono font-bold cursor-pointer disabled:opacity-50 ${t.btnSecondary}`}
                     >
                       Replay
                     </button>
@@ -605,26 +638,18 @@ export default function Dashboard() {
 
             {/* Right Pane - Logs, Ledger & Abuse Simulator */}
             <div className="md:col-span-7 lg:col-span-8 xl:col-span-8 space-y-4 sm:space-y-6">
-              
+
               {/* Tab Selector */}
-              <div className="flex border-b border-zinc-800">
+              <div className={`flex border-b ${t.divider}`}>
                 <button
                   onClick={() => setActiveTab('form')}
-                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'form'
-                      ? 'border-cyan-500 text-cyan-400 bg-cyan-950/10'
-                      : 'border-transparent text-zinc-400 hover:text-zinc-200'
-                  }`}
+                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'form' ? t.tabActive : t.tabInactive}`}
                 >
                   Payment Activity List
                 </button>
                 <button
                   onClick={() => setActiveTab('logs')}
-                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${
-                    activeTab === 'logs'
-                      ? 'border-cyan-500 text-cyan-400 bg-cyan-950/10'
-                      : 'border-transparent text-zinc-400 hover:text-zinc-200'
-                  }`}
+                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'logs' ? t.tabActive : t.tabInactive}`}
                 >
                   Cryptographic Audit Chain ({auditLogs.length})
                 </button>
@@ -632,12 +657,12 @@ export default function Dashboard() {
 
               {activeTab === 'form' ? (
                 /* Payment Activity History list */
-                <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl">
+                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-md font-bold">Payments History</h3>
                     <button
                       onClick={() => fetchData(activeUser.id, accessToken)}
-                      className="p-1.5 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-zinc-100 transition-colors"
+                      className={`p-1.5 border rounded-lg transition-colors ${t.btnRefresh}`}
                       title="Sync data"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -647,14 +672,14 @@ export default function Dashboard() {
                   </div>
 
                   {payments.length === 0 ? (
-                    <div className="text-center py-12 text-zinc-500 font-mono text-sm border-2 border-dashed border-zinc-800 rounded-xl">
+                    <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
                       No payments executed yet. Set up a transfer to start.
                     </div>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs font-mono">
                         <thead>
-                          <tr className="border-b border-zinc-800 text-zinc-500">
+                          <tr className={t.tableHead}>
                             <th className="py-3 px-2">Payment ID</th>
                             <th className="py-3 px-2">From/To</th>
                             <th className="py-3 px-2">Amount</th>
@@ -662,30 +687,32 @@ export default function Dashboard() {
                             <th className="py-3 px-2">Date</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-zinc-800">
+                        <tbody className={t.tableDivide}>
                           {payments.map((p) => (
-                            <tr key={p.paymentId} className="hover:bg-zinc-900/40">
-                              <td className="py-3 px-2 font-bold text-zinc-300">{p.paymentId}</td>
+                            <tr key={p.paymentId} className={t.tableHover}>
+                              <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId}</td>
                               <td className="py-3 px-2">
-                                <span className={p.senderId === activeUser.id ? 'text-zinc-400' : 'text-emerald-400'}>
+                                <span className={p.senderId === activeUser.id ? t.labelMuted : 'text-emerald-400'}>
                                   {p.senderId === activeUser.id ? 'Outbound' : 'Inbound'}
                                 </span>{' '}
-                                <span className="text-[10px] text-zinc-500">
+                                <span className={`text-[10px] ${t.textMuted}`}>
                                   ({p.senderId === activeUser.id ? getUserName(p.recipientId) : getUserName(p.senderId)})
                                 </span>
                               </td>
-                              <td className="py-3 px-2 font-bold text-zinc-200">
+                              <td className={`py-3 px-2 font-bold ${t.textSub}`}>
                                 {p.senderId === activeUser.id ? '-' : '+'}
                                 {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency}
                               </td>
                               <td className="py-3 px-2">
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  p.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'
+                                  p.status === 'COMPLETED'
+                                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                    : 'bg-rose-950 text-rose-400 border border-rose-800'
                                 }`}>
                                   {p.status}
                                 </span>
                               </td>
-                              <td className="py-3 px-2 text-zinc-500">{new Date(p.createdAt).toLocaleTimeString()}</td>
+                              <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleTimeString()}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -695,13 +722,13 @@ export default function Dashboard() {
                 </div>
               ) : (
                 /* Cryptographic Log Chain visualizer */
-                <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6">
+                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 ${t.card}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h3 className="text-md font-bold">Immutable Verification Ledger</h3>
-                      <p className="text-xs text-zinc-400 mt-0.5">Logs are cryptographically linked using SHA-256 hash chaining.</p>
+                      <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Logs are cryptographically linked using SHA-256 hash chaining.</p>
                     </div>
-                    
+
                     <div className="flex gap-2">
                       <button
                         onClick={runAuditVerification}
@@ -723,7 +750,7 @@ export default function Dashboard() {
                   </div>
 
                   {auditLogs.length === 0 ? (
-                    <div className="text-center py-12 text-zinc-500 font-mono text-sm border-2 border-dashed border-zinc-800 rounded-xl">
+                    <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
                       No logs logged yet. Send a transaction to start the ledger.
                     </div>
                   ) : (
@@ -736,44 +763,42 @@ export default function Dashboard() {
                             className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${
                               isTampered
                                 ? 'bg-rose-950/20 border-rose-800 shadow-rose-950/30 shadow-lg'
-                                : 'bg-zinc-900/60 border-zinc-800'
+                                : t.auditBlock
                             }`}
                           >
                             {/* Block Tag */}
-                            <div className="absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-500 font-bold border border-zinc-700">
+                            <div className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded font-bold border ${t.blockTag}`}>
                               BLOCK #{log.index !== undefined ? log.index : index}
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                               <div className="space-y-1">
-                                <p className="text-[10px] text-zinc-500">EVENT TYPE</p>
-                                <p className="font-bold text-zinc-300">{log.event}</p>
+                                <p className={`text-[10px] ${t.textMuted}`}>EVENT TYPE</p>
+                                <p className={`font-bold ${t.textSub}`}>{log.event}</p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] text-zinc-500">TX REFERENCE</p>
+                                <p className={`text-[10px] ${t.textMuted}`}>TX REFERENCE</p>
                                 <p className="text-cyan-400 font-semibold">{log.paymentId || 'N/A'}</p>
                               </div>
                               <div className="space-y-1">
-                                <p className="text-[10px] text-zinc-500">ACTOR ID</p>
-                                <p className="text-zinc-300">{log.actor || 'SYSTEM'}</p>
+                                <p className={`text-[10px] ${t.textMuted}`}>ACTOR ID</p>
+                                <p className={t.textSub}>{log.actor || 'SYSTEM'}</p>
                               </div>
                             </div>
 
-                            <div className="border-t border-zinc-800/80 my-3 pt-3 space-y-2">
+                            <div className={`border-t my-3 pt-3 space-y-2 ${t.dividerMid}`}>
                               <div>
-                                <p className="text-[9px] text-zinc-500 font-bold">PREVIOUS HASH</p>
-                                <p className="text-[11px] text-zinc-400 break-all select-all">{log.prevChecksum}</p>
+                                <p className={`text-[9px] font-bold ${t.textMuted}`}>PREVIOUS HASH</p>
+                                <p className={`text-[11px] break-all select-all ${t.labelMuted}`}>{log.prevChecksum}</p>
                               </div>
                               <div>
-                                <p className="text-[9px] text-zinc-500 font-bold flex items-center gap-1">
+                                <p className={`text-[9px] font-bold flex items-center gap-1 ${t.textMuted}`}>
                                   <span>CURRENT BLOCK HASH</span>
                                   {isTampered && (
                                     <span className="text-[9px] text-rose-400 font-bold animate-pulse">[TAMPERED / BREAK POINT]</span>
                                   )}
                                 </p>
-                                <p className={`text-[11px] break-all select-all font-bold ${
-                                  isTampered ? 'text-rose-400' : 'text-emerald-400'
-                                }`}>
+                                <p className={`text-[11px] break-all select-all font-bold ${isTampered ? 'text-rose-400' : 'text-emerald-400'}`}>
                                   {log.checksum}
                                 </p>
                               </div>
@@ -782,7 +807,7 @@ export default function Dashboard() {
                             {/* Verification Chain Link Arrow */}
                             {index < auditLogs.length - 1 && (
                               <div className="flex justify-center -mb-8 mt-4 relative z-10">
-                                <div className="p-1 bg-[#0a0f1d] border border-zinc-800 rounded-full text-zinc-600 shadow-md">
+                                <div className={`p-1 border rounded-full shadow-md ${t.chainArrow}`}>
                                   <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
                                   </svg>
@@ -798,27 +823,27 @@ export default function Dashboard() {
               )}
 
               {/* Abuse Case & Security Attack Simulator Deck */}
-              <div className="bg-[#0e1629] border border-zinc-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 relative overflow-hidden">
+              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 relative overflow-hidden ${t.card}`}>
                 <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/5 blur-3xl rounded-full"></div>
-                
+
                 <div>
                   <h3 className="text-md font-bold text-rose-400 flex items-center gap-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
-                    Abuse Case & Attack Sandbox Deck
+                    Abuse Case &amp; Attack Sandbox Deck
                   </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">Toggle network/database injection attacks to verify fail-safe filters.</p>
+                  <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Toggle network/database injection attacks to verify fail-safe filters.</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  
+
                   {/* Network / MitM Attacks */}
-                  <div className="space-y-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800">
-                    <h4 className="text-xs font-mono uppercase text-zinc-400 tracking-wider font-bold">1. Network Transit Tampering</h4>
-                    
+                  <div className={`space-y-4 p-4 rounded-xl border ${t.subcard}`}>
+                    <h4 className={`text-xs font-mono uppercase tracking-wider font-bold ${t.labelMuted}`}>1. Network Transit Tampering</h4>
+
                     <div className="space-y-3">
-                      <label className="flex items-start gap-3 p-3 bg-zinc-950/60 border border-zinc-800 hover:border-zinc-700 rounded-lg cursor-pointer transition-all">
+                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
                         <input
                           type="checkbox"
                           checked={simulateTamper}
@@ -826,12 +851,12 @@ export default function Dashboard() {
                           className="mt-1 accent-cyan-500"
                         />
                         <div>
-                          <p className="text-xs font-bold text-zinc-200">MITM Payload Tampering</p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">Calculates valid signature, then multiplies payment amount by 10 before routing (triggers invalid signature rejection).</p>
+                          <p className="text-xs font-bold">MITM Payload Tampering</p>
+                          <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Calculates valid signature, then multiplies payment amount by 10 before routing (triggers invalid signature rejection).</p>
                         </div>
                       </label>
 
-                      <label className="flex items-start gap-3 p-3 bg-zinc-950/60 border border-zinc-800 hover:border-zinc-700 rounded-lg cursor-pointer transition-all">
+                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
                         <input
                           type="checkbox"
                           checked={simulateBadSignature}
@@ -839,38 +864,38 @@ export default function Dashboard() {
                           className="mt-1 accent-cyan-500"
                         />
                         <div>
-                          <p className="text-xs font-bold text-zinc-200">Force Bad Signature</p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">Overrides calculated signature header with a bad mock string (triggers signature matching filter failure).</p>
+                          <p className="text-xs font-bold">Force Bad Signature</p>
+                          <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Overrides calculated signature header with a bad mock string (triggers signature matching filter failure).</p>
                         </div>
                       </label>
                     </div>
                   </div>
 
                   {/* Log Database Tampering */}
-                  <div className="space-y-4 bg-zinc-900/40 p-4 rounded-xl border border-zinc-800 flex flex-col justify-between">
+                  <div className={`space-y-4 p-4 rounded-xl border flex flex-col justify-between ${t.subcard}`}>
                     <div>
-                      <h4 className="text-xs font-mono uppercase text-zinc-400 tracking-wider font-bold mb-3">2. Database Log Corruption</h4>
+                      <h4 className={`text-xs font-mono uppercase tracking-wider font-bold mb-3 ${t.labelMuted}`}>2. Database Log Corruption</h4>
                       <div className="grid grid-cols-2 gap-2 mb-3">
                         <div>
-                          <label className="block text-[9px] font-mono text-zinc-500 mb-1">LOG INDEX</label>
+                          <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>LOG INDEX</label>
                           <input
                             type="number"
                             value={tamperIndexInput}
                             onChange={(e) => setTamperIndexInput(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 font-mono focus:outline-none focus:ring-1 focus:ring-rose-500"
+                            className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
                           />
                         </div>
                         <div>
-                          <label className="block text-[9px] font-mono text-zinc-500 mb-1">NEW AMOUNT</label>
+                          <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>NEW AMOUNT</label>
                           <input
                             type="text"
                             value={tamperAmountInput}
                             onChange={(e) => setTamperAmountInput(e.target.value)}
-                            className="w-full bg-zinc-950 border border-zinc-800 rounded px-2.5 py-1.5 text-xs text-zinc-200 font-mono focus:outline-none focus:ring-1 focus:ring-rose-500"
+                            className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
                           />
                         </div>
                       </div>
-                      <p className="text-[10px] text-zinc-500">Directly modifies a saved log entry in the NestJS in-memory array. Recalculating audit hashes will immediately flag the index.</p>
+                      <p className={`text-[10px] ${t.textMuted}`}>Directly modifies a saved log entry in the NestJS in-memory array. Recalculating audit hashes will immediately flag the index.</p>
                     </div>
 
                     <div className="pt-2">

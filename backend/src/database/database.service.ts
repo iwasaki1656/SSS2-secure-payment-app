@@ -10,20 +10,21 @@ export class DatabaseService implements OnModuleInit {
 
   onModuleInit() {
     // Security: Passwords are hashed using bcrypt (salt rounds=10) — never stored in plaintext
-    const hashedPassword = bcrypt.hashSync('password', 10);
+    const aliceHashedPassword = bcrypt.hashSync('vW8#xK9$mP2!qL5', 10);
+    const bobHashedPassword = bcrypt.hashSync('rT4@nZ7&jQ1^cX3', 10);
 
     // Seed initial users
     this.users.set('alice_id', {
       id: 'alice_id',
       email: 'alice@example.com',
-      password: hashedPassword,
+      password: aliceHashedPassword,
       role: 'USER',
       balance: 1000,
     });
     this.users.set('bob_id', {
       id: 'bob_id',
       email: 'bob@example.com',
-      password: hashedPassword,
+      password: bobHashedPassword,
       role: 'USER',
       balance: 500,
     });

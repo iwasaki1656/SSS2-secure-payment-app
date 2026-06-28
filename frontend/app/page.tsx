@@ -129,7 +129,7 @@ export default function Dashboard() {
   // Attack Simulator state
   const [simulateTamper, setSimulateTamper] = useState(false);
   const [simulateBadSignature, setSimulateBadSignature] = useState(false);
-  const [tamperIndexInput, setTamperIndexInput] = useState('1');
+  const [tamperIndexInput, setTamperIndexInput] = useState('0');
   const [tamperAmountInput, setTamperAmountInput] = useState('99999.00');
   const [isTampering, setIsTampering] = useState(false);
   const [tamperResult, setTamperResult] = useState<string | null>(null);
@@ -290,7 +290,7 @@ export default function Dashboard() {
       const res = await fetch('/api/v1/audit/tamper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-        body: JSON.stringify({ index: parseInt(tamperIndexInput) || 1, amount: parseFloat(tamperAmountInput).toFixed(2) })
+        body: JSON.stringify({ index: isNaN(parseInt(tamperIndexInput, 10)) ? 1 : parseInt(tamperIndexInput, 10), amount: parseFloat(tamperAmountInput).toFixed(2) })
       });
       const data = await res.json();
       if (data.success) {

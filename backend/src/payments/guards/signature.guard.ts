@@ -44,7 +44,10 @@ export class SignatureGuard implements CanActivate {
       .digest('hex');
 
     if (signature !== expectedSignature) {
-      throw new BadRequestException({ code: 'INVALID_SIGNATURE', message: 'Invalid signature' });
+      throw new BadRequestException({
+        code: 'INVALID_SIGNATURE',
+        message: `Invalid signature. Expected: ${expectedSignature}, Received: ${signature}. Payload: ${payload}. Secret: ${secret}`
+      });
     }
 
     return true;

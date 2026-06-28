@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Pre-seeded users in our Fintech prototype system
+// Pre-seeded users in our Fintech prototype system (IDs must match backend database.service.ts)
 const PRESEEDED_USERS = [
-  { id: 'usr_01', email: 'alice@example.com', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
-  { id: 'usr_02', email: 'bob@example.com', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
-  { id: 'usr_03', email: 'charlie@example.com', name: 'Charlie Vance', initialBalance: { USD: 250, JPY: 15000, EUR: 200 } }
+  { id: 'alice_id', email: 'alice@example.com', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
+  { id: 'bob_id', email: 'bob@example.com', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
 ];
+
 
 // Helper to generate UUID v4 without external npm packages
 function generateUuid(): string {
@@ -24,83 +24,84 @@ export default function Dashboard() {
 
   // All theme-sensitive Tailwind classes in one place
   const t = isDark ? {
-    page:           'bg-[#0a0f1d] text-zinc-100',
-    header:         'bg-[#0e1629]/80 border-zinc-800',
-    card:           'bg-[#0e1629] border-zinc-800',
-    cardInner:      'bg-zinc-900 border-zinc-800',
-    subcard:        'bg-zinc-900/40 border-zinc-800',
-    subcardItem:    'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700',
-    input:          'bg-zinc-900 border-zinc-800 text-zinc-100',
-    inputLogin:     'bg-[#16223f] border-zinc-700 text-zinc-100',
-    inputPassword:  'bg-[#121c33] border-zinc-800 text-zinc-500',
-    inputTamper:    'bg-zinc-950 border-zinc-800 text-zinc-200',
-    inputCode:      'bg-[#070b14] border-zinc-800 text-zinc-400',
-    labelMuted:     'text-zinc-400',
-    textMuted:      'text-zinc-500',
-    textSub:        'text-zinc-300',
-    textNormal:     'text-zinc-100',
-    divider:        'border-zinc-800',
-    dividerMid:     'border-zinc-800/80',
-    btnSecondary:   'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-200',
-    btnLogout:      'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-100',
-    btnRefresh:     'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100',
-    tableHover:     'hover:bg-zinc-900/40',
-    tableHead:      'border-b border-zinc-800 text-zinc-500',
-    tableDivide:    'divide-y divide-zinc-800',
-    emptyState:     'border-2 border-dashed border-zinc-800 text-zinc-500',
-    balanceCard:    'bg-zinc-900 border-zinc-800',
-    idempotency:    'bg-zinc-950/60 border-zinc-800',
+    page: 'bg-[#0a0f1d] text-zinc-100',
+    header: 'bg-[#0e1629]/80 border-zinc-800',
+    card: 'bg-[#0e1629] border-zinc-800',
+    cardInner: 'bg-zinc-900 border-zinc-800',
+    subcard: 'bg-zinc-900/40 border-zinc-800',
+    subcardItem: 'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700',
+    input: 'bg-zinc-900 border-zinc-800 text-zinc-100',
+    inputLogin: 'bg-[#16223f] border-zinc-700 text-zinc-100',
+    inputPassword: 'bg-[#121c33] border-zinc-800 text-zinc-500',
+    inputTamper: 'bg-zinc-950 border-zinc-800 text-zinc-200',
+    inputCode: 'bg-[#070b14] border-zinc-800 text-zinc-400',
+    labelMuted: 'text-zinc-400',
+    textMuted: 'text-zinc-500',
+    textSub: 'text-zinc-300',
+    textNormal: 'text-zinc-100',
+    divider: 'border-zinc-800',
+    dividerMid: 'border-zinc-800/80',
+    btnSecondary: 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-200',
+    btnLogout: 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400 hover:text-zinc-100',
+    btnRefresh: 'bg-zinc-900 border-zinc-800 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100',
+    tableHover: 'hover:bg-zinc-900/40',
+    tableHead: 'border-b border-zinc-800 text-zinc-500',
+    tableDivide: 'divide-y divide-zinc-800',
+    emptyState: 'border-2 border-dashed border-zinc-800 text-zinc-500',
+    balanceCard: 'bg-zinc-900 border-zinc-800',
+    idempotency: 'bg-zinc-950/60 border-zinc-800',
     idempotencyVal: 'bg-[#070b14] border-zinc-800 text-zinc-400',
-    auditBlock:     'bg-zinc-900/60 border-zinc-800',
-    blockTag:       'bg-zinc-800 border-zinc-700 text-zinc-500',
-    chainArrow:     'bg-[#0a0f1d] border-zinc-800 text-zinc-600',
-    badge:          'bg-zinc-800 border-zinc-700 text-zinc-400',
-    tabActive:      'border-cyan-500 text-cyan-400 bg-cyan-950/10',
-    tabInactive:    'border-transparent text-zinc-400 hover:text-zinc-200',
-    avatar:         'bg-cyan-950 border-cyan-800 text-cyan-400',
-    toggleBtn:      'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white',
+    auditBlock: 'bg-zinc-900/60 border-zinc-800',
+    blockTag: 'bg-zinc-800 border-zinc-700 text-zinc-500',
+    chainArrow: 'bg-[#0a0f1d] border-zinc-800 text-zinc-600',
+    badge: 'bg-zinc-800 border-zinc-700 text-zinc-400',
+    tabActive: 'border-cyan-500 text-cyan-400 bg-cyan-950/10',
+    tabInactive: 'border-transparent text-zinc-400 hover:text-zinc-200',
+    avatar: 'bg-cyan-950 border-cyan-800 text-cyan-400',
+    toggleBtn: 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white',
   } : {
-    page:           'bg-slate-100 text-slate-900',
-    header:         'bg-white/95 border-slate-200',
-    card:           'bg-white border-slate-200 shadow-sm',
-    cardInner:      'bg-slate-50 border-slate-200',
-    subcard:        'bg-slate-50 border-slate-200',
-    subcardItem:    'bg-white border-slate-200 hover:border-slate-300',
-    input:          'bg-white border-slate-300 text-slate-900',
-    inputLogin:     'bg-white border-slate-300 text-slate-900',
-    inputPassword:  'bg-slate-50 border-slate-200 text-slate-400',
-    inputTamper:    'bg-white border-slate-300 text-slate-800',
-    inputCode:      'bg-slate-100 border-slate-200 text-slate-500',
-    labelMuted:     'text-slate-500',
-    textMuted:      'text-slate-400',
-    textSub:        'text-slate-700',
-    textNormal:     'text-slate-900',
-    divider:        'border-slate-200',
-    dividerMid:     'border-slate-200',
-    btnSecondary:   'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-600 hover:text-slate-900',
-    btnLogout:      'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-500 hover:text-slate-800',
-    btnRefresh:     'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-500 hover:text-slate-800',
-    tableHover:     'hover:bg-slate-50',
-    tableHead:      'border-b border-slate-200 text-slate-500',
-    tableDivide:    'divide-y divide-slate-200',
-    emptyState:     'border-2 border-dashed border-slate-200 text-slate-400',
-    balanceCard:    'bg-slate-50 border-slate-200',
-    idempotency:    'bg-slate-50 border-slate-200',
+    page: 'bg-slate-100 text-slate-900',
+    header: 'bg-white/95 border-slate-200',
+    card: 'bg-white border-slate-200 shadow-sm',
+    cardInner: 'bg-slate-50 border-slate-200',
+    subcard: 'bg-slate-50 border-slate-200',
+    subcardItem: 'bg-white border-slate-200 hover:border-slate-300',
+    input: 'bg-white border-slate-300 text-slate-900',
+    inputLogin: 'bg-white border-slate-300 text-slate-900',
+    inputPassword: 'bg-slate-50 border-slate-200 text-slate-400',
+    inputTamper: 'bg-white border-slate-300 text-slate-800',
+    inputCode: 'bg-slate-100 border-slate-200 text-slate-500',
+    labelMuted: 'text-slate-500',
+    textMuted: 'text-slate-400',
+    textSub: 'text-slate-700',
+    textNormal: 'text-slate-900',
+    divider: 'border-slate-200',
+    dividerMid: 'border-slate-200',
+    btnSecondary: 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-600 hover:text-slate-900',
+    btnLogout: 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-500 hover:text-slate-800',
+    btnRefresh: 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-500 hover:text-slate-800',
+    tableHover: 'hover:bg-slate-50',
+    tableHead: 'border-b border-slate-200 text-slate-500',
+    tableDivide: 'divide-y divide-slate-200',
+    emptyState: 'border-2 border-dashed border-slate-200 text-slate-400',
+    balanceCard: 'bg-slate-50 border-slate-200',
+    idempotency: 'bg-slate-50 border-slate-200',
     idempotencyVal: 'bg-slate-100 border-slate-200 text-slate-500',
-    auditBlock:     'bg-white border-slate-200',
-    blockTag:       'bg-slate-100 border-slate-200 text-slate-500',
-    chainArrow:     'bg-slate-100 border-slate-200 text-slate-400',
-    badge:          'bg-slate-100 border-slate-200 text-slate-500',
-    tabActive:      'border-cyan-500 text-cyan-600 bg-cyan-50',
-    tabInactive:    'border-transparent text-slate-500 hover:text-slate-800',
-    avatar:         'bg-sky-100 border-sky-300 text-sky-600',
-    toggleBtn:      'bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700 hover:text-white',
+    auditBlock: 'bg-white border-slate-200',
+    blockTag: 'bg-slate-100 border-slate-200 text-slate-500',
+    chainArrow: 'bg-slate-100 border-slate-200 text-slate-400',
+    badge: 'bg-slate-100 border-slate-200 text-slate-500',
+    tabActive: 'border-cyan-500 text-cyan-600 bg-cyan-50',
+    tabInactive: 'border-transparent text-slate-500 hover:text-slate-800',
+    avatar: 'bg-sky-100 border-sky-300 text-sky-600',
+    toggleBtn: 'bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700 hover:text-white',
   };
 
   // ─── Authentication & Session ─────────────────────────────────────────────
   const [activeUser, setActiveUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [loginEmail, setLoginEmail] = useState(PRESEEDED_USERS[0].email);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -170,13 +171,15 @@ export default function Dashboard() {
   const fetchData = async (userId: string, token: string) => {
     try {
       const headers = { Authorization: `Bearer ${token}` };
-      const payRes = await fetch(`/api/payments?userId=${userId}&page=1&limit=50`, { headers });
+      // Fetch payments
+      const payRes = await fetch(`/api/v1/payments?userId=${userId}&page=1&limit=50`, { headers });
       const payData = await payRes.json();
       if (payData.success) {
         setPayments(payData.data.payments || []);
         updateBalances(payData.data.payments || []);
       }
-      const auditRes = await fetch('/api/audit/logs?page=1&limit=50', { headers });
+      // Fetch audit logs
+      const auditRes = await fetch('/api/v1/audit/logs?page=1&limit=50', { headers });
       const auditData = await auditRes.json();
       if (auditData.success) setAuditLogs(auditData.data.logs || []);
     } catch (e: any) {
@@ -192,10 +195,17 @@ export default function Dashboard() {
     setTransferSuccess(null);
     setTransferError(null);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: 's3cr3tPass!' })
+        // <<<<<<< HEAD
+        //         body: JSON.stringify({ email: loginEmail, password: 's3cr3tPass!' })
+        // =======
+        body: JSON.stringify({
+          email: loginEmail,
+          password: loginPassword
+        })
+        // >>>>>>> feature/backend-development
       });
       const data = await res.json();
       if (data.success) {
@@ -226,7 +236,7 @@ export default function Dashboard() {
     setTransferError(null);
     setTransferSuccess(null);
     try {
-      const res = await fetch('/api/payments/transfer', {
+      const res = await fetch('/api/v1/payments/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -259,7 +269,10 @@ export default function Dashboard() {
     setLedgerVerified(null);
     setTamperedLogIndex(null);
     try {
-      const res = await fetch('/api/audit/verify', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}` } });
+      const res = await fetch('/api/v1/audit/verify', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
       const data = await res.json();
       if (data.success) {
         setLedgerVerified(data.data.verified);
@@ -274,7 +287,7 @@ export default function Dashboard() {
     setIsTampering(true);
     setTamperResult(null);
     try {
-      const res = await fetch('/api/audit/tamper', {
+      const res = await fetch('/api/v1/audit/tamper', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
         body: JSON.stringify({ index: parseInt(tamperIndexInput) || 1, amount: parseFloat(tamperAmountInput).toFixed(2) })
@@ -394,27 +407,26 @@ export default function Dashboard() {
 
             <form onSubmit={handleLogin} className="space-y-6 relative">
               <div>
-                <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>User Identity</label>
-                <select
+                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">User ID / Email</label>
+                <input
+                  type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className={`w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium ${t.inputLogin}`}
-                >
-                  {PRESEEDED_USERS.map((user) => (
-                    <option key={user.id} value={user.email}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Enter your email address"
+                  required
+                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium"
+                />
               </div>
 
               <div>
                 <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Password</label>
                 <input
                   type="password"
-                  disabled
-                  value="s3cr3tPass!"
-                  className={`w-full border rounded-xl px-4 py-3 focus:outline-none font-mono text-sm cursor-not-allowed ${t.inputPassword}`}
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm"
                 />
                 <span className={`text-[10px] font-mono mt-1 block ${t.textMuted}`}>Authentication uses cryptographically signed tokens.</span>
               </div>
@@ -704,11 +716,10 @@ export default function Dashboard() {
                                 {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency}
                               </td>
                               <td className="py-3 px-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  p.status === 'COMPLETED'
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'COMPLETED'
                                     ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                                     : 'bg-rose-950 text-rose-400 border border-rose-800'
-                                }`}>
+                                  }`}>
                                   {p.status}
                                 </span>
                               </td>
@@ -760,11 +771,10 @@ export default function Dashboard() {
                         return (
                           <div
                             key={log.logId || index}
-                            className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${
-                              isTampered
+                            className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${isTampered
                                 ? 'bg-rose-950/20 border-rose-800 shadow-rose-950/30 shadow-lg'
                                 : t.auditBlock
-                            }`}
+                              }`}
                           >
                             {/* Block Tag */}
                             <div className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded font-bold border ${t.blockTag}`}>

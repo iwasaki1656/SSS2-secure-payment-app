@@ -100,7 +100,7 @@ export default function Dashboard() {
       const headers = { Authorization: `Bearer ${token}` };
 
       // Fetch payments
-      const payRes = await fetch(`/api/payments?userId=${userId}&page=1&limit=50`, { headers });
+      const payRes = await fetch(`/api/v1/payments?userId=${userId}&page=1&limit=50`, { headers });
       const payData = await payRes.json();
       if (payData.success) {
         setPayments(payData.data.payments || []);
@@ -108,7 +108,7 @@ export default function Dashboard() {
       }
 
       // Fetch audit logs
-      const auditRes = await fetch('/api/audit/logs?page=1&limit=50', { headers });
+      const auditRes = await fetch('/api/v1/audit/logs?page=1&limit=50', { headers });
       const auditData = await auditRes.json();
       if (auditData.success) {
         setAuditLogs(auditData.data.logs || []);
@@ -127,7 +127,7 @@ export default function Dashboard() {
     setTransferError(null);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,7 +182,7 @@ export default function Dashboard() {
     setTransferSuccess(null);
 
     try {
-      const res = await fetch('/api/payments/transfer', {
+      const res = await fetch('/api/v1/payments/transfer', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ export default function Dashboard() {
     setTamperedLogIndex(null);
 
     try {
-      const res = await fetch('/api/audit/verify', {
+      const res = await fetch('/api/v1/audit/verify', {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` }
       });
@@ -251,7 +251,7 @@ export default function Dashboard() {
     setTamperResult(null);
 
     try {
-      const res = await fetch('/api/audit/tamper', {
+      const res = await fetch('/api/v1/audit/tamper', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

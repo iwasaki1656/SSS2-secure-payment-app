@@ -99,7 +99,8 @@ export default function Dashboard() {
 
   // ─── Authentication & Session ─────────────────────────────────────────────
   const [activeUser, setActiveUser] = useState<any>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+  // Security: JWT is stored in an HttpOnly cookie managed server-side. It is
+  // never exposed to client-side JS — no accessToken state needed here.
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -168,18 +169,19 @@ export default function Dashboard() {
   };
 
   // Fetch payments list and audit logs
-  const fetchData = async (userId: string, token: string) => {
+  // Security: No token needed here — the HttpOnly cookie is automatically
+  // attached by the browser and extracted server-side by the Next.js proxy routes.
+  const fetchData = async (userId: string) => {
     try {
-      const headers = { Authorization: `Bearer ${token}` };
       // Fetch payments
-      const payRes = await fetch(`/api/v1/payments?userId=${userId}&page=1&limit=50`, { headers });
+      const payRes = await fetch(`/api/v1/payments?userId=${userId}&page=1&limit=50`);
       const payData = await payRes.json();
       if (payData.success) {
         setPayments(payData.data.payments || []);
         updateBalances(payData.data.payments || []);
       }
       // Fetch audit logs
-      const auditRes = await fetch('/api/v1/audit/logs?page=1&limit=50', { headers });
+      const auditRes = await fetch('/api/v1/audit/logs?page=1&limit=50');
       const auditData = await auditRes.json();
       if (auditData.success) setAuditLogs(auditData.data.logs || []);
     } catch (e: any) {
@@ -210,8 +212,8 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setActiveUser(data.data.user);
-        setAccessToken(data.data.accessToken);
-        await fetchData(data.data.user.id, data.data.accessToken);
+        // Security: Token is now in an HttpOnly cookie — no need to store it in state
+        await fetchData(data.data.user.id);
       } else {
         setLoginError(data.error?.message || 'Invalid credentials');
       }
@@ -225,7 +227,7 @@ export default function Dashboard() {
   // Submit transfer request
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!activeUser || !accessToken) return;
+    if (!activeUser) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) { setTransferError('Validation Error: Amount must be greater than 0'); return; }
     if (activeUser.id === recipientId) { setTransferError('Validation Error: Cannot transfer money to yourself'); return; }
@@ -240,7 +242,7 @@ export default function Dashboard() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          // Authorization is handled server-side via HttpOnly cookie — not sent from client
           'X-Idempotency-Key': idempotencyKey,
           'X-Simulate-Tamper': simulateTamper ? 'true' : 'false',
           'X-Simulate-Bad-Signature': simulateBadSignature ? 'true' : 'false'
@@ -250,7 +252,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setTransferSuccess(data.data);
-        await fetchData(activeUser.id, accessToken);
+        await fetchData(activeUser.id);
         setIdempotencyKey(generateUuid());
       } else {
         setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Transfer failed'}`);
@@ -264,14 +266,14 @@ export default function Dashboard() {
 
   // Execute cryptographic ledger integrity audit
   const runAuditVerification = async () => {
-    if (!accessToken) return;
+    if (!activeUser) return;
     setIsVerifying(true);
     setLedgerVerified(null);
     setTamperedLogIndex(null);
     try {
       const res = await fetch('/api/v1/audit/verify', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${accessToken}` }
+        // Authorization handled server-side via HttpOnly cookie
       });
       const data = await res.json();
       if (data.success) {
@@ -283,19 +285,20 @@ export default function Dashboard() {
 
   // Simulate internal database log tampering
   const triggerLogTampering = async () => {
-    if (!accessToken) return;
+    if (!activeUser) return;
     setIsTampering(true);
     setTamperResult(null);
     try {
       const res = await fetch('/api/v1/audit/tamper', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+        headers: { 'Content-Type': 'application/json' },
+        // Authorization handled server-side via HttpOnly cookie
         body: JSON.stringify({ index: isNaN(parseInt(tamperIndexInput, 10)) ? 1 : parseInt(tamperIndexInput, 10), amount: parseFloat(tamperAmountInput).toFixed(2) })
       });
       const data = await res.json();
       if (data.success) {
         setTamperResult('Ledger value corrupted successfully! Run Verification Audit to check.');
-        await fetchData(activeUser.id, accessToken);
+        await fetchData(activeUser.id);
       } else {
         setTamperResult(`Failed: ${data.error?.message || 'Unknown error'}`);
       }
@@ -304,8 +307,11 @@ export default function Dashboard() {
     } finally { setIsTampering(false); }
   };
 
-  const handleLogout = () => {
-    setActiveUser(null); setAccessToken(null); setPayments([]); setAuditLogs([]);
+  const handleLogout = async () => {
+    // Security: Call the server-side logout route to clear the HttpOnly cookie.
+    // Client-side JS cannot delete an HttpOnly cookie directly.
+    await fetch('/api/v1/auth/logout', { method: 'POST' });
+    setActiveUser(null); setPayments([]); setAuditLogs([]);
     setLedgerVerified(null); setTamperedLogIndex(null);
   };
 
@@ -361,7 +367,7 @@ export default function Dashboard() {
             </button>
 
             {/* Ledger Integrity Badge */}
-            {accessToken && (
+            {activeUser && (
               <div className="flex items-center gap-2">
                 <span className={`text-xs font-mono ${t.labelMuted}`}>Ledger Status:</span>
                 {ledgerVerified === true ? (
@@ -388,7 +394,7 @@ export default function Dashboard() {
 
       {/* Main Container */}
       <main className="w-full max-w-[1920px] mx-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8">
-        {!accessToken ? (
+        {!activeUser ? (
           /* Authentication Screen */
           <div className={`w-full max-w-sm sm:max-w-md mx-auto my-6 sm:my-12 border rounded-2xl p-5 sm:p-8 shadow-2xl relative overflow-hidden ${t.card}`}>
             {/* Background Glow */}
@@ -493,7 +499,7 @@ export default function Dashboard() {
                   <div className="flex flex-col text-xs font-mono">
                     <span className={`mb-1 ${t.textMuted}`}>BEARER JWT TOKEN:</span>
                     <span className={`text-[10px] break-all p-2 rounded-lg border font-mono ${t.inputCode}`}>
-                      {accessToken ? `${accessToken.substring(0, 32)}...` : 'None'}
+                      {'[Secured — stored in HttpOnly cookie]'}
                     </span>
                   </div>
                 </div>
@@ -673,7 +679,7 @@ export default function Dashboard() {
                   <div className="flex justify-between items-center mb-4">
                     <h3 className="text-md font-bold">Payments History</h3>
                     <button
-                      onClick={() => fetchData(activeUser.id, accessToken)}
+                      onClick={() => fetchData(activeUser.id)}
                       className={`p-1.5 border rounded-lg transition-colors ${t.btnRefresh}`}
                       title="Sync data"
                     >

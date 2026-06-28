@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
-export async function POST(req: Request) {
+export async function POST() {
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-  const authHeader = req.headers.get('authorization') || '';
+
+  // Security: Read the JWT from the HttpOnly cookie — never from client-supplied headers
+  const cookieStore = await cookies();
+  const token = cookieStore.get('accessToken')?.value || '';
 
   try {
     const res = await fetch(`${backendUrl}/audit/verify`, {
       method: 'POST',
       headers: {
-        'Authorization': authHeader,
+        'Authorization': `Bearer ${token}`,
       },
       cache: 'no-store',
     });

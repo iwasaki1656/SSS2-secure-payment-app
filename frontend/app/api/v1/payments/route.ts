@@ -1,14 +1,18 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function GET(req: Request) {
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
   const { searchParams } = new URL(req.url);
-  const authHeader = req.headers.get('authorization') || '';
+
+  // Security: Read the JWT from the HttpOnly cookie — never from client-supplied headers
+  const cookieStore = await cookies();
+  const token = cookieStore.get('accessToken')?.value || '';
 
   try {
     const res = await fetch(`${backendUrl}/payments?${searchParams.toString()}`, {
       headers: {
-        'Authorization': authHeader,
+        'Authorization': `Bearer ${token}`,
       },
       cache: 'no-store',
     });

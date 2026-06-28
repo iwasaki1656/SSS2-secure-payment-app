@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { calculateHmac } from '@/app/utils/crypto';
 
 export async function POST(req: Request) {
   const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
   const secret = process.env.PAYMENT_SIGNING_SECRET || 'proto_payment_secret_2026_super_secure';
 
+  // Security: Read the JWT from the HttpOnly cookie — never from client-supplied headers
+  const cookieStore = await cookies();
+  const token = cookieStore.get('accessToken')?.value || '';
+
   try {
-    const authHeader = req.headers.get('authorization') || '';
     const idempotencyKey = req.headers.get('x-idempotency-key') || '';
     const simulateTamper = req.headers.get('x-simulate-tamper') === 'true';
     const simulateBadSignature = req.headers.get('x-simulate-bad-signature') === 'true';
@@ -32,12 +36,12 @@ export async function POST(req: Request) {
       signature = 'bad_sig_0000000000000000000000000000000000000000000000000000000000000000';
     }
 
-    // 3. Dispatch request to backend
+    // 3. Dispatch request to backend — token comes from the secure HttpOnly cookie
     const res = await fetch(`${backendUrl}/payments/transfer`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': authHeader,
+        'Authorization': `Bearer ${token}`,
         'X-Idempotency-Key': idempotencyKey,
         'X-Signature': signature,
       },

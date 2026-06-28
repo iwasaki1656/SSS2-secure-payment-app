@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Pre-seeded users in our Fintech prototype system
+// Pre-seeded users in our Fintech prototype system (IDs must match backend database.service.ts)
 const PRESEEDED_USERS = [
-  { id: 'usr_01', email: 'alice@example.com', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
-  { id: 'usr_02', email: 'bob@example.com', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
-  { id: 'usr_03', email: 'charlie@example.com', name: 'Charlie Vance', initialBalance: { USD: 250, JPY: 15000, EUR: 200 } }
+  { id: 'alice_id', email: 'alice@example.com', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
+  { id: 'bob_id', email: 'bob@example.com', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
 ];
+
 
 // Helper to generate UUID v4 without external npm packages
 function generateUuid(): string {

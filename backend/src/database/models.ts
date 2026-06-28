@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   email: string;
-  password?: string; // We'll store it here for simplicity
+  password: string; // Stored as bcrypt hash — never plaintext
   role: 'USER' | 'ADMIN';
   balance: number; // Added balance for internal mock checks
 }

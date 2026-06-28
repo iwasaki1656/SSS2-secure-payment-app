@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { User, Payment, AuditLog } from './models';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
@@ -8,18 +9,21 @@ export class DatabaseService implements OnModuleInit {
   public auditLogs: AuditLog[] = [];
 
   onModuleInit() {
+    // Security: Passwords are hashed using bcrypt (salt rounds=10) — never stored in plaintext
+    const hashedPassword = bcrypt.hashSync('password', 10);
+
     // Seed initial users
     this.users.set('alice_id', {
       id: 'alice_id',
       email: 'alice@example.com',
-      password: 'password',
+      password: hashedPassword,
       role: 'USER',
       balance: 1000,
     });
     this.users.set('bob_id', {
       id: 'bob_id',
       email: 'bob@example.com',
-      password: 'password',
+      password: hashedPassword,
       role: 'USER',
       balance: 500,
     });
@@ -32,3 +36,4 @@ export class DatabaseService implements OnModuleInit {
     return undefined;
   }
 }
+

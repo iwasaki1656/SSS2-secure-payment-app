@@ -22,7 +22,8 @@ export default function Dashboard() {
   // Authentication & Session
   const [activeUser, setActiveUser] = useState<any>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [loginEmail, setLoginEmail] = useState(PRESEEDED_USERS[0].email);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
@@ -132,7 +133,7 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: loginEmail,
-          password: 's3cr3tPass!' // Hardcoded prototype login password
+          password: loginPassword
         })
       });
 
@@ -361,27 +362,26 @@ export default function Dashboard() {
 
             <form onSubmit={handleLogin} className="space-y-6 relative">
               <div>
-                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">User Identity</label>
-                <select
+                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">User ID / Email</label>
+                <input
+                  type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium"
-                >
-                  {PRESEEDED_USERS.map((user) => (
-                    <option key={user.id} value={user.email}>
-                      {user.name} ({user.email})
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Enter your email address"
+                  required
+                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">Password</label>
                 <input
                   type="password"
-                  disabled
-                  value="s3cr3tPass!"
-                  className="w-full bg-[#121c33] border border-zinc-800 rounded-xl px-4 py-3 text-zinc-500 focus:outline-none font-mono text-sm cursor-not-allowed"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  required
+                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm"
                 />
                 <span className="text-[10px] text-zinc-500 font-mono mt-1 block">Authentication uses cryptographically signed tokens.</span>
               </div>

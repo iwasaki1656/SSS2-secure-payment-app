@@ -4,9 +4,25 @@ import React, { useState, useEffect } from 'react';
 
 // Pre-seeded users in our Fintech prototype system (IDs must match backend database.service.ts)
 const PRESEEDED_USERS = [
-  { id: 'alice_id', email: 'alice@example.com', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
-  { id: 'bob_id', email: 'bob@example.com', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
+  { id: 'alice_id', email: 'alice@example.com', username: 'alice_vance', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
+  { id: 'bob_id', email: 'bob@example.com', username: 'bob_vance', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
 ];
+
+// Password strength validation (mirrors backend rule)
+function validatePassword(pw: string): string | null {
+  if (pw.length < 12) return 'Password must be at least 12 characters.';
+  if (!/[a-zA-Z]/.test(pw)) return 'Password must include at least one letter.';
+  if (!/\d/.test(pw)) return 'Password must include at least one number.';
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(pw)) return 'Password must include at least one special character.';
+  return null;
+}
+
+// Rudimentary fake domain check (mirrors backend blocklist)
+const BLOCKED_DOMAINS = ['mailinator.com','guerrillamail.com','tempmail.com','yopmail.com','trashmail.com','fakeinbox.com','maildrop.cc','discard.email','spambox.us'];
+function isFakeDomain(email: string): boolean {
+  const domain = email.split('@')[1]?.toLowerCase();
+  return domain ? BLOCKED_DOMAINS.includes(domain) : false;
+}
 
 
 // Helper to generate UUID v4 without external npm packages
@@ -21,6 +37,25 @@ function generateUuid(): string {
 export default function Dashboard() {
   // ─── Theme ───────────────────────────────────────────────────────────────
   const [isDark, setIsDark] = useState(true);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme) {
+      setIsDark(savedTheme === 'dark');
+    } else {
+      setIsDark(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    }
+    setMounted(true);
+  }, []);
+
+  const toggleTheme = () => {
+    setIsDark(prev => {
+      const newVal = !prev;
+      localStorage.setItem('theme', newVal ? 'dark' : 'light');
+      return newVal;
+    });
+  };
 
   // All theme-sensitive Tailwind classes in one place
   const t = isDark ? {
@@ -31,8 +66,8 @@ export default function Dashboard() {
     subcard: 'bg-zinc-900/40 border-zinc-800',
     subcardItem: 'bg-zinc-950/60 border-zinc-800 hover:border-zinc-700',
     input: 'bg-zinc-900 border-zinc-800 text-zinc-100',
-    inputLogin: 'bg-[#16223f] border-zinc-700 text-zinc-100',
-    inputPassword: 'bg-[#121c33] border-zinc-800 text-zinc-500',
+    inputLogin: 'bg-[#16223f] border-zinc-700 text-zinc-100 placeholder:text-zinc-600',
+    inputPassword: 'bg-[#121c33] border-zinc-800 text-zinc-500 placeholder:text-zinc-700',
     inputTamper: 'bg-zinc-950 border-zinc-800 text-zinc-200',
     inputCode: 'bg-[#070b14] border-zinc-800 text-zinc-400',
     labelMuted: 'text-zinc-400',
@@ -59,6 +94,12 @@ export default function Dashboard() {
     tabInactive: 'border-transparent text-zinc-400 hover:text-zinc-200',
     avatar: 'bg-cyan-950 border-cyan-800 text-cyan-400',
     toggleBtn: 'bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700 hover:text-white',
+    successMsg: 'bg-emerald-950/30 border-emerald-800 text-emerald-300',
+    successTitle: 'text-emerald-400',
+    errorMsg: 'bg-rose-950/40 border-rose-800 text-rose-300',
+    errorBlock: 'bg-rose-950/20 border-rose-800 shadow-rose-950/30 shadow-lg',
+    errorHash: 'text-rose-500',
+    hashText: 'text-zinc-500',
   } : {
     page: 'bg-slate-100 text-slate-900',
     header: 'bg-white/95 border-slate-200',
@@ -67,8 +108,8 @@ export default function Dashboard() {
     subcard: 'bg-slate-50 border-slate-200',
     subcardItem: 'bg-white border-slate-200 hover:border-slate-300',
     input: 'bg-white border-slate-300 text-slate-900',
-    inputLogin: 'bg-white border-slate-300 text-slate-900',
-    inputPassword: 'bg-slate-50 border-slate-200 text-slate-400',
+    inputLogin: 'bg-white border-slate-300 text-slate-900 placeholder:text-slate-400',
+    inputPassword: 'bg-slate-50 border-slate-200 text-slate-400 placeholder:text-slate-400',
     inputTamper: 'bg-white border-slate-300 text-slate-800',
     inputCode: 'bg-slate-100 border-slate-200 text-slate-500',
     labelMuted: 'text-slate-500',
@@ -79,7 +120,7 @@ export default function Dashboard() {
     dividerMid: 'border-slate-200',
     btnSecondary: 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-600 hover:text-slate-900',
     btnLogout: 'bg-slate-200 hover:bg-slate-300 border-slate-300 text-slate-500 hover:text-slate-800',
-    btnRefresh: 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-500 hover:text-slate-800',
+    btnRefresh: 'bg-white border-slate-300 hover:bg-slate-50 text-slate-600 hover:text-slate-900',
     tableHover: 'hover:bg-slate-50',
     tableHead: 'border-b border-slate-200 text-slate-500',
     tableDivide: 'divide-y divide-slate-200',
@@ -90,11 +131,17 @@ export default function Dashboard() {
     auditBlock: 'bg-white border-slate-200',
     blockTag: 'bg-slate-100 border-slate-200 text-slate-500',
     chainArrow: 'bg-slate-100 border-slate-200 text-slate-400',
-    badge: 'bg-slate-100 border-slate-200 text-slate-500',
+    badge: 'bg-white border-slate-300 text-slate-600 shadow-sm',
     tabActive: 'border-cyan-500 text-cyan-600 bg-cyan-50',
     tabInactive: 'border-transparent text-slate-500 hover:text-slate-800',
     avatar: 'bg-sky-100 border-sky-300 text-sky-600',
-    toggleBtn: 'bg-slate-800 border-slate-700 text-slate-100 hover:bg-slate-700 hover:text-white',
+    toggleBtn: 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900',
+    successMsg: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+    successTitle: 'text-emerald-600',
+    errorMsg: 'bg-rose-50 border-rose-200 text-rose-700',
+    errorBlock: 'bg-rose-50 border-rose-300 shadow-rose-200/50 shadow-lg',
+    errorHash: 'text-rose-600',
+    hashText: 'text-slate-500',
   };
 
   // ─── Authentication & Session ─────────────────────────────────────────────
@@ -105,6 +152,26 @@ export default function Dashboard() {
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Sign Up state
+  const [showSignUp, setShowSignUp] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
+  const [signupUsername, setSignupUsername] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
+  const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [isSigningUp, setIsSigningUp] = useState(false);
+  const [signupError, setSignupError] = useState<string | null>(null);
+  const [signupPasswordStrength, setSignupPasswordStrength] = useState<string | null>(null);
+
+  // Profile state
+  const [activeView, setActiveView] = useState<'dashboard' | 'profile'>('dashboard');
+  const [profileUsername, setProfileUsername] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profilePassword, setProfilePassword] = useState('');
+  const [profilePicture, setProfilePicture] = useState<string | null>(null);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
 
   // Balances & Dynamic Calculations
   const [userBalances, setUserBalances] = useState<Record<string, Record<string, number>>>({});
@@ -117,11 +184,11 @@ export default function Dashboard() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [activeTab, setActiveTab] = useState<'form' | 'logs'>('form');
 
-  // Transfer Form state
-  const [recipientId, setRecipientId] = useState(PRESEEDED_USERS[1].id);
-  const [amount, setAmount] = useState('100.00');
+  // Transfer Form state — recipientQuery is free-text (email, username, or ID)
+  const [recipientQuery, setRecipientQuery] = useState('');
+  const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('JPY');
-  const [description, setDescription] = useState('Test Transfer');
+  const [description, setDescription] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState('');
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
@@ -140,14 +207,16 @@ export default function Dashboard() {
     setIdempotencyKey(generateUuid());
   }, []);
 
-  // Reset recipientId to the first user that is NOT the active user whenever login changes
+  // Reset recipientQuery when user logs in/out
   useEffect(() => {
     if (!activeUser) return;
-    const firstOther = PRESEEDED_USERS.find((u) => u.id !== activeUser.id);
-    if (firstOther) setRecipientId(firstOther.id);
+    // Populate profile form fields
+    setProfileUsername(activeUser.username || '');
+    setProfileEmail(activeUser.email || '');
+    setProfilePicture(activeUser.profilePicture || null);
   }, [activeUser]);
 
-  // Set default initial balances on start
+  // Set default initial balances on start (used as fallback before login)
   useEffect(() => {
     const balances: Record<string, Record<string, number>> = {};
     PRESEEDED_USERS.forEach((u) => {
@@ -156,22 +225,34 @@ export default function Dashboard() {
     setUserBalances(balances);
   }, []);
 
-  // Update dynamic balances based on payment history
-  const updateBalances = (paymentList: any[]) => {
+  // Update dynamic balances — seed from backend balance data, then apply payment history
+  const updateBalances = (paymentList: any[], allUsersFromBackend?: any[]) => {
     const balances: Record<string, Record<string, number>> = {};
-    PRESEEDED_USERS.forEach((u) => {
-      balances[u.id] = { ...u.initialBalance };
-    });
-    paymentList.forEach((p) => {
-      if (p.status === 'COMPLETED') {
-        const val = parseFloat(p.amount) || 0;
-        const cur = p.currency;
-        const sender = p.senderId;
-        const recipient = p.recipientId;
-        if (balances[sender] && balances[sender][cur] !== undefined) balances[sender][cur] -= val;
-        if (balances[recipient] && balances[recipient][cur] !== undefined) balances[recipient][cur] += val;
+    // Use backend balance data if available (authoritative source)
+    if (allUsersFromBackend && allUsersFromBackend.length > 0) {
+      allUsersFromBackend.forEach((u: any) => {
+        if (u.balance) balances[u.id] = { ...u.balance };
+      });
+    } else {
+      // Fallback: re-compute from static seed + payment history
+      PRESEEDED_USERS.forEach((u) => {
+        balances[u.id] = { ...u.initialBalance };
+      });
+      // Ensure newly signed-up users (not in PRESEEDED_USERS) have their seed balance initialized
+      if (activeUser && !balances[activeUser.id] && activeUser.balance) {
+        balances[activeUser.id] = { ...activeUser.balance };
       }
-    });
+      paymentList.forEach((p) => {
+        if (p.status === 'COMPLETED') {
+          const val = parseFloat(p.amount) || 0;
+          const cur = p.currency;
+          const sender = p.senderId;
+          const recipient = p.recipientId;
+          if (balances[sender] && balances[sender][cur] !== undefined) balances[sender][cur] -= val;
+          if (balances[recipient] && balances[recipient][cur] !== undefined) balances[recipient][cur] += val;
+        }
+      });
+    }
     setUserBalances(balances);
   };
 
@@ -207,20 +288,18 @@ export default function Dashboard() {
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        // <<<<<<< HEAD
-        //         body: JSON.stringify({ email: loginEmail, password: 's3cr3tPass!' })
-        // =======
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPassword
-        })
-        // >>>>>>> feature/backend-development
+        body: JSON.stringify({ email: loginEmail, password: loginPassword })
       });
       const data = await res.json();
       if (data.success) {
-        setActiveUser(data.data.user);
+        const user = data.data.user;
+        setActiveUser(user);
+        // Seed this user's balance from backend data immediately
+        if (user.balance) {
+          setUserBalances((prev) => ({ ...prev, [user.id]: { ...user.balance } }));
+        }
         // Security: Token is now in an HttpOnly cookie — no need to store it in state
-        await fetchData(data.data.user.id);
+        await fetchData(user.id);
       } else {
         setLoginError(data.error?.message || 'Invalid credentials');
       }
@@ -231,15 +310,117 @@ export default function Dashboard() {
     }
   };
 
+  // Handle new user sign-up
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSignupError(null);
+
+    // Client-side validation
+    if (isFakeDomain(signupEmail)) {
+      setSignupError('This email domain is not accepted. Please use a real email address.');
+      return;
+    }
+    const pwError = validatePassword(signupPassword);
+    if (pwError) { setSignupError(pwError); return; }
+    if (signupPassword !== signupConfirmPassword) {
+      setSignupError('Passwords do not match.');
+      return;
+    }
+
+    setIsSigningUp(true);
+    try {
+      const res = await fetch('/api/v1/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: signupEmail, username: signupUsername, password: signupPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const user = data.data.user;
+        setActiveUser(user);
+        if (user.balance) {
+          setUserBalances((prev) => ({ ...prev, [user.id]: { ...user.balance } }));
+        }
+        await fetchData(user.id);
+        // Reset signup form
+        setSignupEmail(''); setSignupUsername(''); setSignupPassword(''); setSignupConfirmPassword('');
+        setShowSignUp(false);
+      } else {
+        setSignupError(data.error?.message || 'Signup failed. Please try again.');
+      }
+    } catch (err: any) {
+      setSignupError(`Network error: ${err.message}`);
+    } finally {
+      setIsSigningUp(false);
+    }
+  };
+
+  // Handle profile picture file selection
+  const handleProfilePictureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { setProfileError('Image must be under 2MB.'); return; }
+    const reader = new FileReader();
+    reader.onload = () => setProfilePicture(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  // Handle profile update
+  const handleUpdateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    // Validate password only if provided
+    if (profilePassword) {
+      const pwError = validatePassword(profilePassword);
+      if (pwError) { setProfileError(pwError); return; }
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      const body: any = {};
+      if (profileEmail !== activeUser?.email) body.email = profileEmail;
+      if (profileUsername !== activeUser?.username) body.username = profileUsername;
+      if (profilePassword) body.password = profilePassword;
+      if (profilePicture !== activeUser?.profilePicture) body.profilePicture = profilePicture;
+
+      if (Object.keys(body).length === 0) { setProfileError('No changes to save.'); setIsUpdatingProfile(false); return; }
+
+      const res = await fetch('/api/v1/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActiveUser((prev: any) => ({ ...prev, ...data.data.user }));
+        setProfilePassword('');
+        setProfileSuccess('Profile updated successfully!');
+      } else {
+        setProfileError(data.error?.message || 'Failed to update profile.');
+      }
+    } catch (err: any) {
+      setProfileError(`Network error: ${err.message}`);
+    } finally {
+      setIsUpdatingProfile(false);
+    }
+  };
+
   // Submit transfer request
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) { setTransferError('Validation Error: Amount must be greater than 0'); return; }
-    if (activeUser.id === recipientId) { setTransferError('Validation Error: Cannot transfer money to yourself'); return; }
-    const activeBalance = userBalances[activeUser.id]?.[currency] || 0;
-    if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toFixed(2)} ${currency}`); return; }
+    if (!recipientQuery.trim()) { setTransferError('Validation Error: Please enter a recipient email, username, or ID'); return; }
+    // Check if recipient resolves to self
+    const selfUser = PRESEEDED_USERS.find((u) => u.id === activeUser.id);
+    const querySelf = recipientQuery.trim() === activeUser.id || recipientQuery.trim() === activeUser.email || recipientQuery.trim() === (activeUser.username || selfUser?.username);
+    if (querySelf) { setTransferError('Validation Error: Cannot transfer money to yourself'); return; }
+    // Client-side balance pre-check (authoritative check is on the backend)
+    const activeBalance = activeUser.balance?.[currency] ?? 0;
+    if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toLocaleString(undefined, {minimumFractionDigits: 2})} ${currency}`); return; }
 
     setIsTransferring(true);
     setTransferError(null);
@@ -254,11 +435,18 @@ export default function Dashboard() {
           'X-Simulate-Tamper': simulateTamper ? 'true' : 'false',
           'X-Simulate-Bad-Signature': simulateBadSignature ? 'true' : 'false'
         },
-        body: JSON.stringify({ senderId: activeUser.id, recipientId, amount: parseFloat(amount).toFixed(2), currency, description })
+        body: JSON.stringify({ senderId: activeUser.id, recipientId: recipientQuery.trim(), amount: parseFloat(amount).toFixed(2), currency, description })
       });
       const data = await res.json();
       if (data.success) {
         setTransferSuccess(data.data);
+        setActiveUser((prev: any) => ({
+          ...prev,
+          balance: {
+            ...prev.balance,
+            [currency]: (prev.balance[currency] || 0) - numAmount
+          }
+        }));
         await fetchData(activeUser.id);
         setIdempotencyKey(generateUuid());
       } else {
@@ -320,12 +508,21 @@ export default function Dashboard() {
     await fetch('/api/v1/auth/logout', { method: 'POST' });
     setActiveUser(null); setPayments([]); setAuditLogs([]);
     setLedgerVerified(null); setTamperedLogIndex(null);
+    setActiveView('dashboard'); setProfileError(null); setProfileSuccess(null);
   };
 
   const getUserName = (id: string) => {
-    const user = PRESEEDED_USERS.find((u) => u.id === id);
-    return user ? user.name : id;
+    // Check pre-seeded list first, then fall back to id
+    const preseeded = PRESEEDED_USERS.find((u) => u.id === id);
+    if (preseeded) return preseeded.name;
+    // For dynamic users, use the activeUser data if it matches
+    if (activeUser && activeUser.id === id) return activeUser.username || activeUser.email || id;
+    return id;
   };
+
+  if (!mounted) {
+    return null; // Prevents the initial dark mode flash (hydration mismatch) on reload
+  }
 
   return (
     <div className={`min-h-screen w-full font-sans antialiased selection:bg-cyan-500 selection:text-white transition-colors duration-300 ${t.page}`}>
@@ -352,7 +549,7 @@ export default function Dashboard() {
             {/* Theme toggle button */}
             <button
               id="theme-toggle-btn"
-              onClick={() => setIsDark(!isDark)}
+              onClick={toggleTheme}
               title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-xs font-mono font-semibold cursor-pointer select-none ${t.toggleBtn}`}
             >
@@ -408,68 +605,131 @@ export default function Dashboard() {
             <div className="absolute -top-16 -left-16 w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full"></div>
             <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
 
-            <div className="text-center mb-8 relative">
-              <div className="inline-flex p-3 bg-cyan-950/30 border border-cyan-800/50 rounded-2xl text-cyan-400 mb-4">
+            <div className="text-center mb-6 relative">
+              <div className={`inline-flex p-3 rounded-2xl border mb-4 ${t.avatar}`}>
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold">Simulator Login</h2>
-              <p className={`text-sm mt-1 ${t.labelMuted}`}>Select an account to initiate secure session</p>
+              <h2 className="text-xl sm:text-2xl font-bold">{showSignUp ? 'Create Account' : 'Secure Login'}</h2>
+              <p className={`text-sm mt-1 ${t.labelMuted}`}>{showSignUp ? 'Register a new AegisPay account' : 'Sign in to initiate a secure session'}</p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-6 relative">
-              <div>
-                <label className="block text-xs font-mono uppercase text-zinc-400 tracking-wider mb-2">User ID / Email</label>
-                <input
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="Enter your email address"
-                  required
-                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium"
-                />
-              </div>
+            {/* Tab Toggle */}
+            <div className={`flex rounded-xl border p-1 mb-6 gap-1 ${t.cardInner}`}>
+              <button id="login-tab" onClick={() => { setShowSignUp(false); setSignupError(null); setLoginError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${!showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign In</button>
+              <button id="signup-tab" onClick={() => { setShowSignUp(true); setLoginError(null); setSignupError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign Up</button>
+            </div>
 
-              <div>
-                <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Password</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Enter your password"
-                  required
-                  className="w-full bg-[#16223f] border border-zinc-700 rounded-xl px-4 py-3 text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm"
-                />
-                <span className={`text-[10px] font-mono mt-1 block ${t.textMuted}`}>Authentication uses cryptographically signed tokens.</span>
-              </div>
-
-              {loginError && (
-                <div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded-xl p-3 text-sm flex gap-2 items-center">
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>{loginError}</span>
+            {!showSignUp ? (
+              /* ─── LOGIN FORM ─── */
+              <form onSubmit={handleLogin} className="space-y-5 relative">
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Email Address</label>
+                  <input
+                    id="login-email"
+                    type="email"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                    placeholder="Enter your email address"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-medium ${t.inputLogin}`}
+                  />
                 </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoggingIn}
-                className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer"
-              >
-                {isLoggingIn ? (
-                  <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                ) : (
-                  <>
-                    <span>Initialize Session</span>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                    </svg>
-                  </>
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Password</label>
+                  <input
+                    id="login-password"
+                    type="password"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="Enter your password"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm ${t.inputLogin}`}
+                  />
+                  <span className={`text-[10px] font-mono mt-1 block ${t.textMuted}`}>Authentication uses cryptographically signed tokens.</span>
+                </div>
+                {loginError && (
+                  <div className={`rounded-xl p-3 text-sm flex gap-2 items-center border ${t.errorMsg}`}>
+                    <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span>{loginError}</span>
+                  </div>
                 )}
-              </button>
-            </form>
+                <button id="login-submit-btn" type="submit" disabled={isLoggingIn} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer">
+                  {isLoggingIn ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : (<><span>Initialize Session</span><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg></>)}
+                </button>
+              </form>
+            ) : (
+              /* ─── SIGN UP FORM ─── */
+              <form onSubmit={handleSignup} className="space-y-4 relative">
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Email Address</label>
+                  <input
+                    id="signup-email"
+                    type="email"
+                    value={signupEmail}
+                    onChange={(e) => setSignupEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${t.inputLogin}`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Username</label>
+                  <input
+                    id="signup-username"
+                    type="text"
+                    value={signupUsername}
+                    onChange={(e) => setSignupUsername(e.target.value)}
+                    placeholder="your_username"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${t.inputLogin}`}
+                  />
+                </div>
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Password</label>
+                  <input
+                    id="signup-password"
+                    type="password"
+                    value={signupPassword}
+                    onChange={(e) => { setSignupPassword(e.target.value); setSignupPasswordStrength(validatePassword(e.target.value)); }}
+                    placeholder="Min 12 chars, letters + numbers + symbols"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm ${t.inputLogin}`}
+                  />
+                  {/* Live password strength feedback */}
+                  {signupPassword && (
+                    <div className={`mt-2 flex items-center gap-2 text-xs font-mono ${signupPasswordStrength ? 'text-amber-400' : 'text-emerald-400'}`}>
+                      <span>{signupPasswordStrength ? `⚠️ ${signupPasswordStrength}` : '✅ Strong password'}</span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Confirm Password</label>
+                  <input
+                    id="signup-confirm-password"
+                    type="password"
+                    value={signupConfirmPassword}
+                    onChange={(e) => setSignupConfirmPassword(e.target.value)}
+                    placeholder="Re-enter your password"
+                    required
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm ${t.inputLogin} ${signupConfirmPassword && signupPassword !== signupConfirmPassword ? '!border-rose-600' : ''}`}
+                  />
+                  {signupConfirmPassword && signupPassword !== signupConfirmPassword && (
+                    <span className="text-rose-400 text-xs font-mono mt-1 block">Passwords do not match</span>
+                  )}
+                </div>
+                {signupError && (
+                  <div className={`rounded-xl p-3 text-sm flex gap-2 items-center border ${t.errorMsg}`}>
+                    <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <span>{signupError}</span>
+                  </div>
+                )}
+                <button id="signup-submit-btn" type="submit" disabled={isSigningUp} className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer">
+                  {isSigningUp ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : (<><span>Create Secure Account</span><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg></>)}
+                </button>
+              </form>
+            )}
           </div>
         ) : (
           /* Unified Double-Pane Dashboard */
@@ -482,21 +742,37 @@ export default function Dashboard() {
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl relative overflow-hidden ${t.card}`}>
                 <div className="flex justify-between items-start mb-4">
                   <div className="flex gap-3 items-center">
-                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold ${t.avatar}`}>
-                      {activeUser.email[0].toUpperCase()}
-                    </div>
+                    {/* Profile picture or avatar initial */}
+                    {profilePicture || activeUser.profilePicture ? (
+                      <img src={profilePicture || activeUser.profilePicture} alt="Profile" className={`w-10 h-10 rounded-full border object-cover ${t.avatar}`} />
+                    ) : (
+                      <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold ${t.avatar}`}>
+                        {(activeUser.username || activeUser.email || '?')[0].toUpperCase()}
+                      </div>
+                    )}
                     <div>
-                      <h3 className="font-bold text-sm">{getUserName(activeUser.id)}</h3>
+                      <h3 className="font-bold text-sm">{activeUser.username || getUserName(activeUser.id)}</h3>
                       <p className={`text-xs font-mono ${t.labelMuted}`}>{activeUser.email}</p>
                     </div>
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className={`p-1.5 border rounded-lg transition-colors text-xs font-mono cursor-pointer ${t.btnLogout}`}
-                  >
-                    Logout
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      id="profile-nav-btn"
+                      onClick={() => setActiveView(activeView === 'profile' ? 'dashboard' : 'profile')}
+                      title="Edit Profile"
+                      className={`p-1.5 border rounded-lg transition-colors text-xs font-mono cursor-pointer ${activeView === 'profile' ? 'bg-cyan-500 border-cyan-400 text-white' : t.btnSecondary}`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className={`p-1.5 border rounded-lg transition-colors text-xs font-mono cursor-pointer ${t.btnLogout}`}
+                    >
+                      Logout
+                    </button>
+                  </div>
                 </div>
+
 
                 <div className={`border-t pt-4 space-y-2 ${t.divider}`}>
                   <div className="flex justify-between text-xs font-mono">
@@ -516,7 +792,7 @@ export default function Dashboard() {
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
                 <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
                 <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {Object.entries(userBalances[activeUser.id] || {}).map(([cur, bal]) => (
+                  {Object.entries(activeUser.balance || {}).map(([cur, bal]: any) => (
                     <div key={cur} className={`border p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center ${t.balanceCard}`}>
                       <span className={`text-[10px] sm:text-xs font-mono font-semibold ${t.textMuted}`}>{cur}</span>
                       <span className="text-xs sm:text-sm font-bold mt-1">
@@ -539,17 +815,14 @@ export default function Dashboard() {
                 <form onSubmit={handleTransfer} className="space-y-4">
                   <div>
                     <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Recipient</label>
-                    <select
-                      value={recipientId}
-                      onChange={(e) => setRecipientId(e.target.value)}
+                    <input
+                      id="transfer-recipient-input"
+                      type="text"
+                      value={recipientQuery}
+                      onChange={(e) => setRecipientQuery(e.target.value)}
+                      placeholder="Email, username, or user ID"
                       className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium ${t.input}`}
-                    >
-                      {PRESEEDED_USERS.filter((u) => u.id !== activeUser.id).map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.id})
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
 
                   <div className="grid grid-cols-3 gap-2">
@@ -559,7 +832,7 @@ export default function Dashboard() {
                         type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        placeholder="100.00"
+                        placeholder="Amount"
                         className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
                       />
                     </div>
@@ -606,7 +879,7 @@ export default function Dashboard() {
 
                   {/* Errors and Success feedback */}
                   {transferError && (
-                    <div className="bg-rose-950/30 border border-rose-800 text-rose-300 rounded-xl p-3 text-xs flex gap-2 items-start font-mono">
+                    <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.errorMsg}`}>
                       <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
@@ -615,12 +888,12 @@ export default function Dashboard() {
                   )}
 
                   {transferSuccess && (
-                    <div className="bg-emerald-950/30 border border-emerald-800 text-emerald-300 rounded-xl p-3 text-xs flex gap-2 items-start font-mono">
+                    <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.successMsg}`}>
                       <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                       </svg>
                       <div>
-                        <p className="font-bold text-emerald-400">Success!</p>
+                        <p className={`font-bold ${t.successTitle}`}>Success!</p>
                         <p className="mt-1">ID: {transferSuccess.paymentId}</p>
                         <p>Status: {transferSuccess.status}</p>
                         <p>Key: {transferSuccess.idempotencyKey.substring(0, 8)}...</p>
@@ -661,8 +934,68 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Right Pane - Logs, Ledger & Abuse Simulator */}
+            {/* Right Pane - Profile OR Logs, Ledger & Abuse Simulator */}
             <div className="md:col-span-7 lg:col-span-8 xl:col-span-8 space-y-4 sm:space-y-6">
+
+              {activeView === 'profile' ? (
+                <div className={`border rounded-xl sm:rounded-2xl p-6 sm:p-8 shadow-xl ${t.card}`}>
+                  <div className="flex items-center gap-3 mb-6">
+                    <div className="p-2 bg-cyan-950/30 border border-cyan-800/50 rounded-xl text-cyan-400">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                    </div>
+                    <div><h3 className="font-bold text-lg">Edit Profile</h3><p className={`text-xs ${t.labelMuted}`}>Update your account details</p></div>
+                  </div>
+                  <div className="flex flex-col sm:flex-row items-center gap-6 mb-8 pb-6 border-b border-zinc-800">
+                    <div className="relative group">
+                      {(profilePicture || activeUser.profilePicture) ? (
+                        <img src={profilePicture || activeUser.profilePicture} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-cyan-800" />
+                      ) : (
+                        <div className={`w-24 h-24 rounded-full border-4 border-cyan-800 flex items-center justify-center text-3xl font-bold ${t.avatar}`}>
+                          {(activeUser.username || activeUser.email || '?')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <label htmlFor="profile-picture-input" className="absolute inset-0 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                      </label>
+                      <input id="profile-picture-input" type="file" accept="image/*" className="hidden" onChange={handleProfilePictureChange} />
+                    </div>
+                    <div>
+                      <p className={`text-sm font-semibold ${t.textSub}`}>{activeUser.username || activeUser.email}</p>
+                      <p className={`text-xs ${t.labelMuted}`}>{activeUser.email}</p>
+                      <p className={`text-[10px] mt-2 font-mono ${t.textMuted}`}>Click photo to upload a new one (max 2MB)</p>
+                    </div>
+                  </div>
+                  <form id="profile-form" onSubmit={handleUpdateProfile} className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                      <div>
+                        <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Username</label>
+                        <input id="profile-username" type="text" value={profileUsername} onChange={(e) => setProfileUsername(e.target.value)} className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${t.input}`} />
+                      </div>
+                      <div>
+                        <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Email Address</label>
+                        <input id="profile-email" type="email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${t.input}`} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>New Password <span className="normal-case font-normal">(leave blank to keep current)</span></label>
+                      <input id="profile-password" type="password" value={profilePassword} onChange={(e) => setProfilePassword(e.target.value)} placeholder="Min 12 chars, letters + numbers + symbols" className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono ${t.input}`} />
+                      {profilePassword && (
+                        <div className={`mt-2 text-xs font-mono ${validatePassword(profilePassword) ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {validatePassword(profilePassword) ? `\u26a0\ufe0f ${validatePassword(profilePassword)}` : '\u2705 Strong password'}
+                        </div>
+                      )}
+                    </div>
+                    {profileError && (<div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded-xl p-3 text-sm flex gap-2 items-center"><svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg><span>{profileError}</span></div>)}
+                    {profileSuccess && (<div className="bg-emerald-950/40 border border-emerald-800 text-emerald-300 rounded-xl p-3 text-sm flex gap-2 items-center"><svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>{profileSuccess}</span></div>)}
+                    <div className="flex gap-3 pt-2">
+                      <button id="profile-save-btn" type="submit" disabled={isUpdatingProfile} className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-cyan-500/20 transition-all disabled:opacity-50 flex justify-center items-center gap-2 cursor-pointer">
+                        {isUpdatingProfile ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Save Changes'}
+                      </button>
+                      <button type="button" onClick={() => { setActiveView('dashboard'); setProfileError(null); setProfileSuccess(null); }} className={`px-6 py-3 border rounded-xl text-sm font-semibold transition-all cursor-pointer ${t.btnSecondary}`}>Cancel</button>
+                    </div>
+                  </form>
+                </div>
+              ) : (<>
 
               {/* Tab Selector */}
               <div className={`flex border-b ${t.divider}`}>
@@ -687,7 +1020,7 @@ export default function Dashboard() {
                     <h3 className="text-md font-bold">Payments History</h3>
                     <button
                       onClick={() => fetchData(activeUser.id)}
-                      className={`p-1.5 border rounded-lg transition-colors ${t.btnRefresh}`}
+                      className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`}
                       title="Sync data"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -785,7 +1118,7 @@ export default function Dashboard() {
                           <div
                             key={log.logId || index}
                             className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${isTampered
-                                ? 'bg-rose-950/20 border-rose-800 shadow-rose-950/30 shadow-lg'
+                                ? t.errorBlock
                                 : t.auditBlock
                               }`}
                           >
@@ -818,10 +1151,10 @@ export default function Dashboard() {
                                 <p className={`text-[9px] font-bold flex items-center gap-1 ${t.textMuted}`}>
                                   <span>CURRENT BLOCK HASH</span>
                                   {isTampered && (
-                                    <span className="text-[9px] text-rose-400 font-bold animate-pulse">[TAMPERED / BREAK POINT]</span>
+                                    <span className={`text-[9px] font-bold animate-pulse ${t.errorHash}`}>[TAMPERED / BREAK POINT]</span>
                                   )}
                                 </p>
-                                <p className={`text-[11px] break-all select-all font-bold ${isTampered ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                <p className={`text-[11px] break-all select-all font-bold ${isTampered ? t.errorHash : t.successTitle}`}>
                                   {log.checksum}
                                 </p>
                               </div>
@@ -953,6 +1286,7 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
+              </>)}
             </div>
           </div>
         )}

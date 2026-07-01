@@ -1,9 +1,11 @@
 export interface User {
   id: string;
   email: string;
+  username: string;
   password: string; // Stored as bcrypt hash — never plaintext
   role: 'USER' | 'ADMIN';
-  balance: number; // Added balance for internal mock checks
+  balance: Record<string, number>; // Currency-specific balances (e.g., { USD: 5000, JPY: 100000 })
+  profilePicture?: string; // Optional base64 or URL string
 }
 
 export interface Payment {

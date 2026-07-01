@@ -140,6 +140,13 @@ export default function Dashboard() {
     setIdempotencyKey(generateUuid());
   }, []);
 
+  // Reset recipientId to the first user that is NOT the active user whenever login changes
+  useEffect(() => {
+    if (!activeUser) return;
+    const firstOther = PRESEEDED_USERS.find((u) => u.id !== activeUser.id);
+    if (firstOther) setRecipientId(firstOther.id);
+  }, [activeUser]);
+
   // Set default initial balances on start
   useEffect(() => {
     const balances: Record<string, Record<string, number>> = {};

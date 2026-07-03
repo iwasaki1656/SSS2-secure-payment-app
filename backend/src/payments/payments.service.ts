@@ -24,6 +24,10 @@ export class PaymentsService {
       throw new NotFoundException({ code: 'SENDER_NOT_FOUND', message: 'Sender not found' });
     }
 
+    if (sender.status === 'LIMITED') {
+      throw new UnprocessableEntityException({ code: 'ACCOUNT_LIMITED', message: 'Your account is currently limited. You cannot initiate transfers.' });
+    }
+
     // Resolve recipient by ID, email, or username (free-text entry support)
     const recipient = this.db.findUser(dto.recipientId);
     if (!recipient) {

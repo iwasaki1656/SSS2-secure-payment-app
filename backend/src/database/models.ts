@@ -4,6 +4,7 @@ export interface User {
   username: string;
   password: string; // Stored as bcrypt hash — never plaintext
   role: 'USER' | 'ADMIN';
+  status: 'ACTIVE' | 'BANNED' | 'LIMITED'; // Account status managed by admin
   balance: Record<string, number>; // Currency-specific balances (e.g., { USD: 5000, JPY: 100000 })
   profilePicture?: string; // Optional base64 or URL string
 }

@@ -153,6 +153,16 @@ export default function Dashboard() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
+  // Login portal selection: null = selection screen, 'USER' = user login, 'ADMIN' = staff login
+  const [loginPortalMode, setLoginPortalMode] = useState<'USER' | 'ADMIN' | null>(null);
+
+  // Admin Dashboard state
+  const [adminUsers, setAdminUsers] = useState<any[]>([]);
+  const [adminTransactions, setAdminTransactions] = useState<any[]>([]);
+  const [adminTab, setAdminTab] = useState<'users' | 'transactions'>('users');
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [adminActionMsg, setAdminActionMsg] = useState<string | null>(null);
+
   // Sign Up state
   const [showSignUp, setShowSignUp] = useState(false);
   const [signupEmail, setSignupEmail] = useState('');
@@ -182,7 +192,7 @@ export default function Dashboard() {
   const [ledgerVerified, setLedgerVerified] = useState<boolean | null>(null);
   const [tamperedLogIndex, setTamperedLogIndex] = useState<number | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
-  const [activeTab, setActiveTab] = useState<'form' | 'logs'>('form');
+  const [activeTab, setActiveTab] = useState<'form' | 'logs' | 'admin'>('form');
 
   // Transfer Form state — recipientQuery is free-text (email, username, or ID)
   const [recipientQuery, setRecipientQuery] = useState('');
@@ -277,6 +287,46 @@ export default function Dashboard() {
     }
   };
 
+  // Admin: Fetch all users and all transactions
+  const fetchAdminData = async () => {
+    setIsLoadingAdmin(true);
+    try {
+      const [usersRes, txRes] = await Promise.all([
+        fetch('/api/v1/admin/users'),
+        fetch('/api/v1/admin/transactions'),
+      ]);
+      const usersData = await usersRes.json();
+      const txData = await txRes.json();
+      if (usersData.success) setAdminUsers(usersData.data.users || []);
+      if (txData.success) setAdminTransactions(txData.data.transactions || []);
+    } catch (e: any) {
+      console.error('Admin fetch error:', e);
+    } finally {
+      setIsLoadingAdmin(false);
+    }
+  };
+
+  // Admin: Update a user's status
+  const handleUpdateUserStatus = async (userId: string, status: 'ACTIVE' | 'BANNED' | 'LIMITED') => {
+    setAdminActionMsg(null);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${userId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAdminActionMsg(`User status updated to ${status}`);
+        await fetchAdminData();
+      } else {
+        setAdminActionMsg(`Error: ${data.error?.message || 'Failed to update'}`);
+      }
+    } catch (e: any) {
+      setAdminActionMsg(`Network error: ${e.message}`);
+    }
+  };
+
   // Perform mock authentication login
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,7 +335,8 @@ export default function Dashboard() {
     setTransferSuccess(null);
     setTransferError(null);
     try {
-      const res = await fetch('/api/v1/auth/login', {
+      const endpoint = loginPortalMode === 'ADMIN' ? '/api/v1/auth/admin-login' : '/api/v1/auth/login';
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword })
@@ -300,6 +351,12 @@ export default function Dashboard() {
         }
         // Security: Token is now in an HttpOnly cookie — no need to store it in state
         await fetchData(user.id);
+        // If admin, pre-load admin dashboard data
+        if (user.role === 'ADMIN') {
+          fetchAdminData();
+          runAuditVerification(true);
+          setActiveTab('admin');
+        }
       } else {
         setLoginError(data.error?.message || 'Invalid credentials');
       }
@@ -460,8 +517,8 @@ export default function Dashboard() {
   };
 
   // Execute cryptographic ledger integrity audit
-  const runAuditVerification = async () => {
-    if (!activeUser) return;
+  const runAuditVerification = async (force: boolean = false) => {
+    if (!activeUser && !force) return;
     setIsVerifying(true);
     setLedgerVerified(null);
     setTamperedLogIndex(null);
@@ -509,6 +566,8 @@ export default function Dashboard() {
     setActiveUser(null); setPayments([]); setAuditLogs([]);
     setLedgerVerified(null); setTamperedLogIndex(null);
     setActiveView('dashboard'); setProfileError(null); setProfileSuccess(null);
+    setLoginPortalMode(null); setAdminUsers([]); setAdminTransactions([]);
+    setActiveTab('form'); setAdminActionMsg(null);
   };
 
   const getUserName = (id: string) => {
@@ -605,23 +664,127 @@ export default function Dashboard() {
             <div className="absolute -top-16 -left-16 w-32 h-32 bg-cyan-500/10 blur-3xl rounded-full"></div>
             <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full"></div>
 
-            <div className="text-center mb-6 relative">
-              <div className={`inline-flex p-3 rounded-2xl border mb-4 ${t.avatar}`}>
-                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                </svg>
+            {/* ─── PORTAL SELECTION SCREEN ─── */}
+            {loginPortalMode === null && !showSignUp ? (
+              <div className="relative">
+                <div className="text-center mb-8">
+                  <div className={`inline-flex p-3 rounded-2xl border mb-4 ${t.avatar}`}>
+                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold">Log in to AegisPay</h2>
+                  <p className={`text-sm mt-1 ${t.labelMuted}`}>Choose how you log in to your account.</p>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Staff Login button */}
+                  <button
+                    id="staff-login-btn"
+                    onClick={() => setLoginPortalMode('ADMIN')}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer group hover:border-violet-500 hover:shadow-lg hover:shadow-violet-500/10 ${isDark ? 'bg-violet-950/20 border-violet-800 text-violet-300 hover:bg-violet-950/40' : 'bg-violet-50 border-violet-300 text-violet-700 hover:bg-violet-100'}`}
+                  >
+                    <span className={`p-2 rounded-xl border transition-colors ${isDark ? 'bg-violet-900/50 border-violet-700 group-hover:bg-violet-800/60' : 'bg-violet-100 border-violet-300 group-hover:bg-violet-200'}`}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    </span>
+                    <div className="text-left">
+                      <p className="font-bold text-sm">Staff Login</p>
+                      <p className={`text-xs ${isDark ? 'text-violet-400' : 'text-violet-500'}`}>Admin portal with full system access</p>
+                    </div>
+                    <svg className="w-4 h-4 ml-auto opacity-50 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  {/* User Login button */}
+                  <button
+                    id="user-login-btn"
+                    onClick={() => setLoginPortalMode('USER')}
+                    className={`w-full flex items-center gap-4 px-5 py-4 rounded-2xl border-2 transition-all cursor-pointer group hover:border-cyan-500 hover:shadow-lg hover:shadow-cyan-500/10 ${isDark ? 'bg-cyan-950/20 border-cyan-800 text-cyan-300 hover:bg-cyan-950/40' : 'bg-cyan-50 border-cyan-300 text-cyan-700 hover:bg-cyan-100'}`}
+                  >
+                    <span className={`p-2 rounded-xl border transition-colors ${isDark ? 'bg-cyan-900/50 border-cyan-700 group-hover:bg-cyan-800/60' : 'bg-cyan-100 border-cyan-300 group-hover:bg-cyan-200'}`}>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </span>
+                    <div className="text-left">
+                      <p className="font-bold text-sm">User Login</p>
+                      <p className={`text-xs ${isDark ? 'text-cyan-400' : 'text-cyan-500'}`}>Access your account and transfers</p>
+                    </div>
+                    <svg className="w-4 h-4 ml-auto opacity-50 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className={`text-center mt-8 pt-6 border-t ${t.divider}`}>
+                  <p className={`text-sm ${t.labelMuted}`}>
+                    Don&apos;t have an account yet?{' '}
+                    <button
+                      id="goto-signup-link"
+                      onClick={() => { setShowSignUp(true); setLoginPortalMode('USER'); }}
+                      className="text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 cursor-pointer transition-colors"
+                    >
+                      Sign up
+                    </button>
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl sm:text-2xl font-bold">{showSignUp ? 'Create Account' : 'Secure Login'}</h2>
-              <p className={`text-sm mt-1 ${t.labelMuted}`}>{showSignUp ? 'Register a new AegisPay account' : 'Sign in to initiate a secure session'}</p>
-            </div>
+            ) : (
+              /* ─── LOGIN / SIGNUP FORMS ─── */
+              <>
+                {/* Back button */}
+                {!showSignUp && (
+                  <button
+                    onClick={() => { setLoginPortalMode(null); setLoginError(null); }}
+                    className={`flex items-center gap-1.5 text-xs font-mono mb-5 cursor-pointer transition-colors ${t.labelMuted} hover:text-cyan-400`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back to login selection
+                  </button>
+                )}
 
-            {/* Tab Toggle */}
-            <div className={`flex rounded-xl border p-1 mb-6 gap-1 ${t.cardInner}`}>
-              <button id="login-tab" onClick={() => { setShowSignUp(false); setSignupError(null); setLoginError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${!showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign In</button>
-              <button id="signup-tab" onClick={() => { setShowSignUp(true); setLoginError(null); setSignupError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign Up</button>
-            </div>
+                <div className="text-center mb-6 relative">
+                  <div className={`inline-flex p-3 rounded-2xl border mb-4 ${loginPortalMode === 'ADMIN' ? (isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-100 border-violet-300 text-violet-600') : t.avatar}`}>
+                    {loginPortalMode === 'ADMIN' ? (
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
+                    ) : (
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                    )}
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-bold">
+                    {showSignUp ? 'Create Account' : (loginPortalMode === 'ADMIN' ? 'Staff Login' : 'User Login')}
+                  </h2>
+                  <p className={`text-sm mt-1 ${t.labelMuted}`}>
+                    {showSignUp ? 'Register a new AegisPay account' : (loginPortalMode === 'ADMIN' ? 'Sign in to the admin portal' : 'Sign in to initiate a secure session')}
+                  </p>
+                  {loginPortalMode === 'ADMIN' && !showSignUp && (
+                    <span className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-50 border-violet-300 text-violet-600'}`}>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                      Staff Portal
+                    </span>
+                  )}
+                </div>
 
-            {!showSignUp ? (
+                {/* Tab Toggle (only shown for USER portal) */}
+                {loginPortalMode === 'USER' && (
+                  <div className={`flex rounded-xl border p-1 mb-6 gap-1 ${t.cardInner}`}>
+                    <button id="login-tab" onClick={() => { setShowSignUp(false); setSignupError(null); setLoginError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${!showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign In</button>
+                    <button id="signup-tab" onClick={() => { setShowSignUp(true); setLoginError(null); setSignupError(null); }} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${showSignUp ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : t.labelMuted}`}>Sign Up</button>
+                  </div>
+                )}
+              </>
+            )}
+
+            {(loginPortalMode !== null || showSignUp) && (!showSignUp ? (
               /* ─── LOGIN FORM ─── */
               <form onSubmit={handleLogin} className="space-y-5 relative">
                 <div>
@@ -729,6 +892,14 @@ export default function Dashboard() {
                   {isSigningUp ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : (<><span>Create Secure Account</span><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg></>)}
                 </button>
               </form>
+            ))}
+
+            {/* Signup back link */}
+            {showSignUp && (
+              <p className={`text-center text-sm mt-4 ${t.labelMuted}`}>
+                Already have an account?{' '}
+                <button onClick={() => { setShowSignUp(false); setSignupError(null); }} className="text-cyan-400 hover:text-cyan-300 font-semibold underline underline-offset-2 cursor-pointer">Sign in</button>
+              </p>
             )}
           </div>
         ) : (
@@ -788,7 +959,8 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Dynamic Balance Board */}
+              {/* Dynamic Balance Board — hidden for Admin accounts */}
+              {activeUser?.role !== 'ADMIN' && (
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
                 <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
                 <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
@@ -802,8 +974,10 @@ export default function Dashboard() {
                   ))}
                 </div>
               </div>
+              )}
 
-              {/* Interactive Transfer Form Panel */}
+              {/* Interactive Transfer Form Panel — hidden for Admin accounts */}
+              {activeUser?.role !== 'ADMIN' && (
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
                 <h3 className="text-md font-bold mb-4 flex items-center gap-2 text-cyan-400">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -812,7 +986,18 @@ export default function Dashboard() {
                   Transfer Funds
                 </h3>
 
-                <form onSubmit={handleTransfer} className="space-y-4">
+                {activeUser?.status === 'LIMITED' ? (
+                  <div className={`rounded-xl p-5 text-sm flex gap-3 items-start border ${t.errorMsg}`}>
+                    <svg className="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>
+                      <h4 className="font-bold text-base mb-1">Account Limited</h4>
+                      <p className="opacity-90">Your account is currently limited. You can only view your balance. You cannot initiate new transfers until your account status is restored.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <form onSubmit={handleTransfer} className="space-y-4">
                   <div>
                     <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Recipient</label>
                     <input
@@ -931,7 +1116,9 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </form>
+                )}
               </div>
+              )}
             </div>
 
             {/* Right Pane - Profile OR Logs, Ledger & Abuse Simulator */}
@@ -997,23 +1184,173 @@ export default function Dashboard() {
                 </div>
               ) : (<>
 
-              {/* Tab Selector */}
+              {/* Tab Selector — tabs available depend on role */}
               <div className={`flex border-b ${t.divider}`}>
-                <button
-                  onClick={() => setActiveTab('form')}
-                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'form' ? t.tabActive : t.tabInactive}`}
-                >
-                  Payment Activity List
-                </button>
-                <button
-                  onClick={() => setActiveTab('logs')}
-                  className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'logs' ? t.tabActive : t.tabInactive}`}
-                >
-                  Cryptographic Audit Chain ({auditLogs.length})
-                </button>
+                {/* Admin Dashboard tab — ADMIN only */}
+                {activeUser?.role === 'ADMIN' && (
+                  <button
+                    onClick={() => { setActiveTab('admin'); fetchAdminData(); }}
+                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'admin' ? (isDark ? 'border-violet-500 text-violet-400 bg-violet-950/10' : 'border-violet-500 text-violet-600 bg-violet-50') : t.tabInactive}`}
+                  >
+                    🛡️ Admin Dashboard
+                  </button>
+                )}
+                {/* Payment Activity tab — USER only (admins use All Transactions in Admin Dashboard) */}
+                {activeUser?.role !== 'ADMIN' && (
+                  <button
+                    onClick={() => setActiveTab('form')}
+                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'form' ? t.tabActive : t.tabInactive}`}
+                  >
+                    Payment Activity
+                  </button>
+                )}
+                {/* Cryptographic Audit Chain tab — ADMIN only */}
+                {activeUser?.role === 'ADMIN' && (
+                  <button
+                    onClick={() => setActiveTab('logs')}
+                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'logs' ? t.tabActive : t.tabInactive}`}
+                  >
+                    Audit Chain ({auditLogs.length})
+                  </button>
+                )}
               </div>
 
-              {activeTab === 'form' ? (
+              {activeTab === 'admin' && activeUser?.role === 'ADMIN' && (
+                /* ─── ADMIN DASHBOARD ─── */
+                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-6 ${t.card}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-xl border ${isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-100 border-violet-300 text-violet-600'}`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-lg">Admin Dashboard</h3>
+                        <p className={`text-xs ${t.labelMuted}`}>Manage users and monitor all system activity.</p>
+                      </div>
+                    </div>
+                    <button onClick={fetchAdminData} disabled={isLoadingAdmin} className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`} title="Refresh">
+                      <svg className={`w-4 h-4 ${isLoadingAdmin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 6h-2.182" /></svg>
+                    </button>
+                  </div>
+
+                  {/* Admin Sub-tabs */}
+                  <div className={`flex rounded-xl border p-1 gap-1 ${t.cardInner}`}>
+                    <button onClick={() => setAdminTab('users')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'users' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
+                      👥 User Management ({adminUsers.length})
+                    </button>
+                    <button onClick={() => setAdminTab('transactions')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'transactions' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
+                      💳 All Transactions ({adminTransactions.length})
+                    </button>
+                  </div>
+
+                  {/* Action message */}
+                  {adminActionMsg && (
+                    <div className={`rounded-xl p-3 text-sm border ${adminActionMsg.startsWith('Error') ? t.errorMsg : t.successMsg}`}>
+                      {adminActionMsg}
+                    </div>
+                  )}
+
+                  {adminTab === 'users' ? (
+                    /* User list */
+                    <div className="overflow-x-auto">
+                      {adminUsers.length === 0 ? (
+                        <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No users found.</div>
+                      ) : (
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead>
+                            <tr className={t.tableHead}>
+                              <th className="py-3 px-2">User</th>
+                              <th className="py-3 px-2">Role</th>
+                              <th className="py-3 px-2">Status</th>
+                              <th className="py-3 px-2 text-right">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className={t.tableDivide}>
+                            {adminUsers.map((u: any) => (
+                              <tr key={u.id} className={t.tableHover}>
+                                <td className="py-3 px-2">
+                                  <p className={`font-bold ${t.textSub}`}>{u.username}</p>
+                                  <p className={`text-[10px] ${t.textMuted}`}>{u.email}</p>
+                                </td>
+                                <td className="py-3 px-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                    u.role === 'ADMIN'
+                                      ? (isDark ? 'bg-violet-950 text-violet-400 border-violet-800' : 'bg-violet-100 text-violet-700 border-violet-300')
+                                      : (isDark ? 'bg-cyan-950 text-cyan-400 border-cyan-800' : 'bg-cyan-100 text-cyan-700 border-cyan-300')
+                                  }`}>{u.role}</span>
+                                </td>
+                                <td className="py-3 px-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                                    u.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                                    : u.status === 'BANNED' ? 'bg-rose-950 text-rose-400 border-rose-800'
+                                    : 'bg-amber-950 text-amber-400 border-amber-800'
+                                  }`}>{u.status}</span>
+                                </td>
+                                <td className="py-3 px-2">
+                                  {/* Prevent admins from managing other admins or themselves */}
+                                  {u.role !== 'ADMIN' && u.id !== activeUser.id ? (
+                                    <div className="flex gap-1 justify-end">
+                                      {u.status !== 'ACTIVE' && (
+                                        <button onClick={() => handleUpdateUserStatus(u.id, 'ACTIVE')} className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800 hover:bg-emerald-900 cursor-pointer transition-colors">Activate</button>
+                                      )}
+                                      {u.status !== 'LIMITED' && (
+                                        <button onClick={() => handleUpdateUserStatus(u.id, 'LIMITED')} className="px-2 py-1 rounded text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800 hover:bg-amber-900 cursor-pointer transition-colors">Limit</button>
+                                      )}
+                                      {u.status !== 'BANNED' && (
+                                        <button onClick={() => handleUpdateUserStatus(u.id, 'BANNED')} className="px-2 py-1 rounded text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-800 hover:bg-rose-900 cursor-pointer transition-colors">Ban</button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className={`text-[10px] ${t.textMuted}`}>{u.id === activeUser.id ? '(you)' : '—'}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  ) : (
+                    /* Global Transactions list */
+                    <div className="overflow-x-auto">
+                      {adminTransactions.length === 0 ? (
+                        <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No transactions found.</div>
+                      ) : (
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead>
+                            <tr className={t.tableHead}>
+                              <th className="py-3 px-2">Payment ID</th>
+                              <th className="py-3 px-2">Sender</th>
+                              <th className="py-3 px-2">Recipient</th>
+                              <th className="py-3 px-2">Amount</th>
+                              <th className="py-3 px-2">Status</th>
+                              <th className="py-3 px-2">Date</th>
+                            </tr>
+                          </thead>
+                          <tbody className={t.tableDivide}>
+                            {adminTransactions.map((p: any) => (
+                              <tr key={p.paymentId} className={t.tableHover}>
+                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId.substring(0,8)}...</td>
+                                <td className={`py-3 px-2 ${t.textMuted}`}>{p.senderId}</td>
+                                <td className={`py-3 px-2 ${t.textMuted}`}>{p.recipientId}</td>
+                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>{parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})} {p.currency}</td>
+                                <td className="py-3 px-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    p.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'
+                                  }`}>{p.status}</span>
+                                </td>
+                                <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'form' && (
                 /* Payment Activity History list */
                 <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
                   <div className="flex justify-between items-center mb-4">
@@ -1077,7 +1414,9 @@ export default function Dashboard() {
                     </div>
                   )}
                 </div>
-              ) : (
+              )}
+
+              {activeTab === 'logs' && activeUser?.role === 'ADMIN' && (
                 /* Cryptographic Log Chain visualizer */
                 <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 ${t.card}`}>
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1088,7 +1427,7 @@ export default function Dashboard() {
 
                     <div className="flex gap-2">
                       <button
-                        onClick={runAuditVerification}
+                        onClick={() => runAuditVerification()}
                         disabled={isVerifying}
                         className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                       >
@@ -1178,7 +1517,9 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Abuse Case & Security Attack Simulator Deck */}
+              {/* Abuse Case & Security Attack Simulator Deck — USER only */}
+              {/* Normal users can attempt attacks to see the system detect and block them in real time */}
+              {activeUser?.role !== 'ADMIN' && (
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 relative overflow-hidden ${t.card}`}>
                 <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/5 blur-3xl rounded-full"></div>
 
@@ -1286,7 +1627,8 @@ export default function Dashboard() {
                   </div>
                 )}
               </div>
-              </>)}
+              )}
+            </>)}
             </div>
           </div>
         )}

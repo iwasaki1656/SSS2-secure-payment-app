@@ -23,10 +23,52 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
+    // Security: Reject login for BANNED accounts.
+    // Use generic error to avoid revealing account status to attackers.
+    if (user.status === 'BANNED') {
+      throw new UnauthorizedException();
+    }
+
+    // Security: Prevent Admin accounts from logging in via the normal user login page
+    if (user.role === 'ADMIN') {
+      throw new UnauthorizedException('Admin accounts cannot login via the user portal.');
+    }
+
     const payload = { sub: user.id, email: user.email, role: user.role };
     const accessToken = await this.jwtService.signAsync(payload);
 
     // Return User object without password
+    const { password, ...userWithoutPassword } = user;
+
+    return {
+      accessToken,
+      expiresIn: 3600,
+      user: userWithoutPassword,
+    };
+  }
+
+  async adminLogin(dto: LoginDto) {
+    const user = this.db.getUserByEmail(dto.email);
+
+    // Security: Use bcrypt.compare to safely validate password against hash
+    if (!user) throw new UnauthorizedException();
+    const passwordValid = await bcrypt.compare(dto.password, user.password);
+    if (!passwordValid) {
+      throw new UnauthorizedException();
+    }
+
+    if (user.status === 'BANNED') {
+      throw new UnauthorizedException();
+    }
+
+    // Security: Prevent normal users from logging in via the admin portal
+    if (user.role !== 'ADMIN') {
+      throw new UnauthorizedException('Only admins can login via the admin portal.');
+    }
+
+    const payload = { sub: user.id, email: user.email, role: user.role };
+    const accessToken = await this.jwtService.signAsync(payload);
+
     const { password, ...userWithoutPassword } = user;
 
     return {

@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AuditService } from '../audit/audit.service';
 import { TransferDto } from './dto/transfer.dto';
 import { Payment } from '../database/models';
 import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
+
+// ─── Fraud Detection Limits ───────────────────────────────────────────────────
+const SINGLE_TX_LIMIT = 20000;    // Max amount per single transaction
+const DAILY_LIMIT = 50000;        // Max total transferred in a 24-hour window
 
 @Injectable()
 export class PaymentsService {
@@ -12,7 +17,7 @@ export class PaymentsService {
     private readonly auditService: AuditService,
   ) {}
 
-  transfer(dto: TransferDto, idempotencyKey: string): Payment {
+  async transfer(dto: TransferDto, idempotencyKey: string): Promise<Payment> {
     const amount = parseFloat(dto.amount);
     if (isNaN(amount) || amount <= 0) {
       throw new UnprocessableEntityException({ code: 'INVALID_AMOUNT', message: 'Amount must be > 0' });
@@ -28,6 +33,18 @@ export class PaymentsService {
       throw new UnprocessableEntityException({ code: 'ACCOUNT_LIMITED', message: 'Your account is currently limited. You cannot initiate transfers.' });
     }
 
+    // Security: Transaction PIN Validation
+    // If the sender has set a PIN, they MUST provide the correct one to proceed.
+    if (sender.transactionPin) {
+      if (!dto.transactionPin) {
+        throw new ForbiddenException({ code: 'PIN_REQUIRED', message: 'A Transaction PIN is required to authorize this transfer. Please enter your 4-digit PIN.' });
+      }
+      const pinValid = await bcrypt.compare(dto.transactionPin, sender.transactionPin);
+      if (!pinValid) {
+        throw new ForbiddenException({ code: 'INVALID_PIN', message: 'Incorrect Transaction PIN. Transfer blocked.' });
+      }
+    }
+
     // Resolve recipient by ID, email, or username (free-text entry support)
     const recipient = this.db.findUser(dto.recipientId);
     if (!recipient) {
@@ -39,6 +56,28 @@ export class PaymentsService {
     }
 
     const currency = dto.currency;
+
+    // Security: Fraud Detection — Single Transaction Limit
+    if (amount > SINGLE_TX_LIMIT) {
+      throw new UnprocessableEntityException({
+        code: 'FRAUD_SINGLE_TX_LIMIT',
+        message: `Transfer blocked: Single transaction limit is ${SINGLE_TX_LIMIT.toLocaleString()} ${currency}. For large transfers, please contact support.`,
+      });
+    }
+
+    // Security: Fraud Detection — Daily Velocity Limit (rolling 24-hour window)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const dailyTotal = Array.from(this.db.payments.values())
+      .filter((p) => p.senderId === sender.id && p.currency === currency && p.status === 'COMPLETED' && p.createdAt >= oneDayAgo)
+      .reduce((sum, p) => sum + parseFloat(p.amount), 0);
+
+    if (dailyTotal + amount > DAILY_LIMIT) {
+      const remaining = Math.max(0, DAILY_LIMIT - dailyTotal);
+      throw new UnprocessableEntityException({
+        code: 'FRAUD_DAILY_LIMIT',
+        message: `Transfer blocked: Daily transfer limit of ${DAILY_LIMIT.toLocaleString()} ${currency} reached. Remaining allowance: ${remaining.toLocaleString()} ${currency}.`,
+      });
+    }
 
     // Security Fix: Validate balance against the specific currency being sent
     const senderCurrencyBalance = sender.balance[currency] ?? 0;

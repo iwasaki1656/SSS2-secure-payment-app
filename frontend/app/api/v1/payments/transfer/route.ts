@@ -11,6 +11,16 @@ export async function POST(req: Request) {
   const token = cookieStore.get('accessToken')?.value || '';
 
   try {
+    // Security: CSRF validation — the client must echo back the token from the csrfToken cookie
+    const csrfCookie = cookieStore.get('csrfToken')?.value;
+    const csrfHeader = req.headers.get('x-csrf-token');
+    if (!csrfCookie || csrfCookie !== csrfHeader) {
+      return NextResponse.json(
+        { success: false, error: { code: 'CSRF_VIOLATION', message: 'Invalid or missing CSRF token. Request blocked.' } },
+        { status: 403 }
+      );
+    }
+
     const idempotencyKey = req.headers.get('x-idempotency-key') || '';
     const simulateTamper = req.headers.get('x-simulate-tamper') === 'true';
     const simulateBadSignature = req.headers.get('x-simulate-bad-signature') === 'true';

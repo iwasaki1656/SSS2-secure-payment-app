@@ -15,6 +15,16 @@ export async function PUT(req: Request) {
       );
     }
 
+    // Security: CSRF validation — the client must echo back the token from the csrfToken cookie
+    const csrfCookie = cookieStore.get('csrfToken')?.value;
+    const csrfHeader = req.headers.get('x-csrf-token');
+    if (!csrfCookie || csrfCookie !== csrfHeader) {
+      return NextResponse.json(
+        { success: false, error: { code: 'CSRF_VIOLATION', message: 'Invalid or missing CSRF token. Request blocked.' } },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const res = await fetch(`${backendUrl}/auth/profile`, {
       method: 'PUT',

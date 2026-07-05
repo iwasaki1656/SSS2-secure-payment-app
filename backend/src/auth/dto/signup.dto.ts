@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsOptional } from 'class-validator';
 
 // Blocklist of common fake/disposable email domains
 const BLOCKED_DOMAINS = [
@@ -37,4 +37,10 @@ export class SignupDto {
     },
   )
   password!: string;
+
+  // Security: Transaction PIN — optional at signup, must be exactly 4 digits
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'Transaction PIN must be exactly 4 digits.' })
+  transactionPin?: string;
 }

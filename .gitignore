@@ -19,3 +19,13 @@
 # OS-specific junk files
 .DS_Store
 Thumbs.db
+
+# Database and Secrets
+backend/data/
+*.sqlite
+*.db
+
+# IDE and Agent Tools
+.gemini/
+.vscode/
+.idea/

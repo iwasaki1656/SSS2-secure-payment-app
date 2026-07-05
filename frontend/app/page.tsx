@@ -148,6 +148,8 @@ export default function Dashboard() {
   const [activeUser, setActiveUser] = useState<any>(null);
   // Security: JWT is stored in an HttpOnly cookie managed server-side. It is
   // never exposed to client-side JS — no accessToken state needed here.
+  // Security: CSRF token is stored in JS state (read from the csrfToken cookie after login)
+  const [csrfToken, setCsrfToken] = useState<string>('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -169,6 +171,7 @@ export default function Dashboard() {
   const [signupUsername, setSignupUsername] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
+  const [signupTransactionPin, setSignupTransactionPin] = useState('');
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
   const [signupPasswordStrength, setSignupPasswordStrength] = useState<string | null>(null);
@@ -178,6 +181,7 @@ export default function Dashboard() {
   const [profileUsername, setProfileUsername] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profilePassword, setProfilePassword] = useState('');
+  const [profileTransactionPin, setProfileTransactionPin] = useState('');
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
@@ -199,6 +203,7 @@ export default function Dashboard() {
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('JPY');
   const [description, setDescription] = useState('');
+  const [transferPin, setTransferPin] = useState('');
   const [idempotencyKey, setIdempotencyKey] = useState('');
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferError, setTransferError] = useState<string | null>(null);
@@ -216,6 +221,33 @@ export default function Dashboard() {
   useEffect(() => {
     setIdempotencyKey(generateUuid());
   }, []);
+
+  // Security: Idle Inactivity Timeout — auto-logout after 5 minutes of no activity
+  useEffect(() => {
+    if (!activeUser) return; // Only active when logged in
+    const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+    let idleTimer: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(async () => {
+        await fetch('/api/v1/auth/logout', { method: 'POST' });
+        setActiveUser(null); setPayments([]); setAuditLogs([]);
+        setLedgerVerified(null); setTamperedLogIndex(null);
+        setActiveView('dashboard'); setProfileError(null); setProfileSuccess(null);
+        alert('You have been automatically logged out due to 5 minutes of inactivity.');
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    const events = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+    events.forEach((e) => window.addEventListener(e, resetTimer, { passive: true }));
+    resetTimer(); // Start the timer immediately
+
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [activeUser]);
 
   // Reset recipientQuery when user logs in/out
   useEffect(() => {
@@ -236,7 +268,7 @@ export default function Dashboard() {
   }, []);
 
   // Update dynamic balances — seed from backend balance data, then apply payment history
-  const updateBalances = (paymentList: any[], allUsersFromBackend?: any[]) => {
+  const updateBalances = (paymentList: any[], allUsersFromBackend?: any[], currentActiveUser?: any) => {
     const balances: Record<string, Record<string, number>> = {};
     // Use backend balance data if available (authoritative source)
     if (allUsersFromBackend && allUsersFromBackend.length > 0) {
@@ -249,8 +281,9 @@ export default function Dashboard() {
         balances[u.id] = { ...u.initialBalance };
       });
       // Ensure newly signed-up users (not in PRESEEDED_USERS) have their seed balance initialized
-      if (activeUser && !balances[activeUser.id] && activeUser.balance) {
-        balances[activeUser.id] = { ...activeUser.balance };
+      const userToSeed = currentActiveUser || activeUser;
+      if (userToSeed && !balances[userToSeed.id] && userToSeed.balance) {
+        balances[userToSeed.id] = { ...userToSeed.balance };
       }
       paymentList.forEach((p) => {
         if (p.status === 'COMPLETED') {
@@ -269,14 +302,14 @@ export default function Dashboard() {
   // Fetch payments list and audit logs
   // Security: No token needed here — the HttpOnly cookie is automatically
   // attached by the browser and extracted server-side by the Next.js proxy routes.
-  const fetchData = async (userId: string) => {
+  const fetchData = async (userId: string, currentActiveUser?: any) => {
     try {
       // Fetch payments
       const payRes = await fetch(`/api/v1/payments?userId=${userId}&page=1&limit=50`);
       const payData = await payRes.json();
       if (payData.success) {
         setPayments(payData.data.payments || []);
-        updateBalances(payData.data.payments || []);
+        updateBalances(payData.data.payments || [], undefined, currentActiveUser);
       }
       // Fetch audit logs
       const auditRes = await fetch('/api/v1/audit/logs?page=1&limit=50');
@@ -345,12 +378,14 @@ export default function Dashboard() {
       if (data.success) {
         const user = data.data.user;
         setActiveUser(user);
+        // Security: Store the Anti-CSRF token returned by the login endpoint
+        if (data.data.csrfToken) setCsrfToken(data.data.csrfToken);
         // Seed this user's balance from backend data immediately
         if (user.balance) {
           setUserBalances((prev) => ({ ...prev, [user.id]: { ...user.balance } }));
         }
         // Security: Token is now in an HttpOnly cookie — no need to store it in state
-        await fetchData(user.id);
+        await fetchData(user.id, user);
         // If admin, pre-load admin dashboard data
         if (user.role === 'ADMIN') {
           fetchAdminData();
@@ -389,18 +424,20 @@ export default function Dashboard() {
       const res = await fetch('/api/v1/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: signupEmail, username: signupUsername, password: signupPassword }),
+        body: JSON.stringify({ email: signupEmail, username: signupUsername, password: signupPassword, transactionPin: signupTransactionPin || undefined }),
       });
       const data = await res.json();
       if (data.success) {
         const user = data.data.user;
         setActiveUser(user);
+        // Security: Store the Anti-CSRF token from the signup response
+        if (data.data.csrfToken) setCsrfToken(data.data.csrfToken);
         if (user.balance) {
           setUserBalances((prev) => ({ ...prev, [user.id]: { ...user.balance } }));
         }
-        await fetchData(user.id);
+        await fetchData(user.id, user);
         // Reset signup form
-        setSignupEmail(''); setSignupUsername(''); setSignupPassword(''); setSignupConfirmPassword('');
+        setSignupEmail(''); setSignupUsername(''); setSignupPassword(''); setSignupConfirmPassword(''); setSignupTransactionPin('');
         setShowSignUp(false);
       } else {
         setSignupError(data.error?.message || 'Signup failed. Please try again.');
@@ -441,18 +478,24 @@ export default function Dashboard() {
       if (profileUsername !== activeUser?.username) body.username = profileUsername;
       if (profilePassword) body.password = profilePassword;
       if (profilePicture !== activeUser?.profilePicture) body.profilePicture = profilePicture;
+      if (profileTransactionPin) body.transactionPin = profileTransactionPin;
 
       if (Object.keys(body).length === 0) { setProfileError('No changes to save.'); setIsUpdatingProfile(false); return; }
 
       const res = await fetch('/api/v1/auth/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Security: CSRF double-submit cookie pattern
+          'X-CSRF-Token': csrfToken,
+        },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.success) {
         setActiveUser((prev: any) => ({ ...prev, ...data.data.user }));
         setProfilePassword('');
+        setProfileTransactionPin('');
         setProfileSuccess('Profile updated successfully!');
       } else {
         setProfileError(data.error?.message || 'Failed to update profile.');
@@ -488,15 +531,18 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
           // Authorization is handled server-side via HttpOnly cookie — not sent from client
+          // Security: CSRF double-submit cookie pattern
+          'X-CSRF-Token': csrfToken,
           'X-Idempotency-Key': idempotencyKey,
           'X-Simulate-Tamper': simulateTamper ? 'true' : 'false',
           'X-Simulate-Bad-Signature': simulateBadSignature ? 'true' : 'false'
         },
-        body: JSON.stringify({ senderId: activeUser.id, recipientId: recipientQuery.trim(), amount: parseFloat(amount).toFixed(2), currency, description })
+        body: JSON.stringify({ senderId: activeUser.id, recipientId: recipientQuery.trim(), amount: parseFloat(amount).toFixed(2), currency, description, transactionPin: transferPin || undefined })
       });
       const data = await res.json();
       if (data.success) {
         setTransferSuccess(data.data);
+        setTransferPin('');
         setActiveUser((prev: any) => ({
           ...prev,
           balance: {
@@ -504,7 +550,7 @@ export default function Dashboard() {
             [currency]: (prev.balance[currency] || 0) - numAmount
           }
         }));
-        await fetchData(activeUser.id);
+        await fetchData(activeUser.id, activeUser);
         setIdempotencyKey(generateUuid());
       } else {
         setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Transfer failed'}`);
@@ -550,7 +596,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setTamperResult('Ledger value corrupted successfully! Run Verification Audit to check.');
-        await fetchData(activeUser.id);
+        await fetchData(activeUser.id, activeUser);
       } else {
         setTamperResult(`Failed: ${data.error?.message || 'Unknown error'}`);
       }
@@ -882,6 +928,22 @@ export default function Dashboard() {
                     <span className="text-rose-400 text-xs font-mono mt-1 block">Passwords do not match</span>
                   )}
                 </div>
+                <div>
+                  <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>
+                    Transaction PIN <span className={`normal-case font-normal ${t.textMuted}`}>(Optional — 4 digits)</span>
+                  </label>
+                  <input
+                    id="signup-transaction-pin"
+                    type="password"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={signupTransactionPin}
+                    onChange={(e) => setSignupTransactionPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                    placeholder="e.g. 1234"
+                    className={`w-full rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono text-sm tracking-widest ${t.inputLogin}`}
+                  />
+                  <span className={`text-[10px] font-mono mt-1 block ${t.textMuted}`}>If set, this PIN will be required to authorize every transfer.</span>
+                </div>
                 {signupError && (
                   <div className={`rounded-xl p-3 text-sm flex gap-2 items-center border ${t.errorMsg}`}>
                     <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
@@ -964,7 +1026,7 @@ export default function Dashboard() {
               <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
                 <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
                 <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {Object.entries(activeUser.balance || {}).map(([cur, bal]: any) => (
+                  {Object.entries(userBalances[activeUser.id] || activeUser.balance || {}).map(([cur, bal]: any) => (
                     <div key={cur} className={`border p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center ${t.balanceCard}`}>
                       <span className={`text-[10px] sm:text-xs font-mono font-semibold ${t.textMuted}`}>{cur}</span>
                       <span className="text-xs sm:text-sm font-bold mt-1">
@@ -1044,6 +1106,25 @@ export default function Dashboard() {
                       className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 ${t.input}`}
                     />
                   </div>
+
+                  {/* Security: Transaction PIN — only shown if user has set one */}
+                  {activeUser?.transactionPinSet && (
+                    <div>
+                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>
+                        🔐 Transaction PIN <span className="text-rose-400">*required</span>
+                      </label>
+                      <input
+                        id="transfer-pin-input"
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={transferPin}
+                        onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="Enter your 4-digit PIN"
+                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono tracking-widest ${t.input}`}
+                      />
+                    </div>
+                  )}
 
                   {/* Idempotency Key Section */}
                   <div className={`p-3 rounded-xl border space-y-2 ${t.idempotency}`}>
@@ -1171,6 +1252,19 @@ export default function Dashboard() {
                           {validatePassword(profilePassword) ? `\u26a0\ufe0f ${validatePassword(profilePassword)}` : '\u2705 Strong password'}
                         </div>
                       )}
+                    </div>
+                    <div>
+                      <label className={`block text-xs font-mono uppercase tracking-wider mb-2 ${t.labelMuted}`}>Transaction PIN <span className="normal-case font-normal">(leave blank to keep current)</span></label>
+                      <input
+                        id="profile-transaction-pin"
+                        type="password"
+                        inputMode="numeric"
+                        maxLength={4}
+                        value={profileTransactionPin}
+                        onChange={(e) => setProfileTransactionPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                        placeholder="4-digit PIN"
+                        className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all font-mono tracking-widest ${t.input}`}
+                      />
                     </div>
                     {profileError && (<div className="bg-rose-950/40 border border-rose-800 text-rose-300 rounded-xl p-3 text-sm flex gap-2 items-center"><svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg><span>{profileError}</span></div>)}
                     {profileSuccess && (<div className="bg-emerald-950/40 border border-emerald-800 text-emerald-300 rounded-xl p-3 text-sm flex gap-2 items-center"><svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><span>{profileSuccess}</span></div>)}

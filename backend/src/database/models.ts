@@ -1,12 +1,18 @@
 export interface User {
   id: string;
-  email: string;
+  email: string;         // Decrypted in-memory representation
+  emailEncrypted: string; // AES-256-GCM encrypted — what is persisted at rest
   username: string;
   password: string; // Stored as bcrypt hash — never plaintext
+  // Security: Transaction PIN — hashed with bcrypt, required to authorize fund transfers
+  transactionPin?: string;
   role: 'USER' | 'ADMIN';
-  status: 'ACTIVE' | 'BANNED' | 'LIMITED'; // Account status managed by admin
-  balance: Record<string, number>; // Currency-specific balances (e.g., { USD: 5000, JPY: 100000 })
-  profilePicture?: string; // Optional base64 or URL string
+  status: 'ACTIVE' | 'BANNED' | 'LIMITED';
+  balance: Record<string, number>;
+  profilePicture?: string;
+  // Security: Brute-force protection — track failed logins and lockout
+  failedLoginAttempts: number;
+  lockoutUntil?: Date;
 }
 
 export interface Payment {

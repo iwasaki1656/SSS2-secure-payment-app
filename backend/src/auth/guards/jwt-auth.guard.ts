@@ -7,12 +7,14 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
+import { AuthService } from '../auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
   constructor(
     private jwtService: JwtService,
     private configService: ConfigService,
+    private authService: AuthService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -26,6 +28,12 @@ export class JwtAuthGuard implements CanActivate {
       const payload = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get<string>('JWT_SECRET'),
       });
+
+      // Security: JWT Blocklist check — reject tokens that have been explicitly revoked via logout
+      if (payload.jti && this.authService.isTokenBlocked(payload.jti)) {
+        throw new UnauthorizedException('Session has been invalidated. Please log in again.');
+      }
+
       (request as any).user = payload;
     } catch {
       throw new UnauthorizedException();

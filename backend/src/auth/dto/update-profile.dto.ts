@@ -26,4 +26,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   profilePicture?: string; // Base64 encoded image string or URL
+
+  // Security: Transaction PIN update — must be exactly 4 digits
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}$/, { message: 'Transaction PIN must be exactly 4 digits.' })
+  transactionPin?: string;
 }

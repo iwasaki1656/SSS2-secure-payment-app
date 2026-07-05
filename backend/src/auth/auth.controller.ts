@@ -34,4 +34,15 @@ export class AuthController {
     // Security: User ID is extracted from the verified JWT payload, not from the request body
     return this.authService.updateProfile(req.user.sub, updateProfileDto);
   }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  logout(@Request() req: any) {
+    // Security: True session invalidation — blocklist this specific token's jti
+    if (req.user?.jti) {
+      this.authService.logout(req.user.jti);
+    }
+    return { success: true, message: 'Logged out successfully.' };
+  }
 }

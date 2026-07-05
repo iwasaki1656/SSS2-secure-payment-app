@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, Min, IsNumberString, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumberString, Matches } from 'class-validator';
 
 export class TransferDto {
   @IsString()
@@ -21,4 +21,9 @@ export class TransferDto {
   @IsOptional()
   @IsString()
   description?: string;
+
+  // Security: Transaction PIN — required if the sender has set one
+  @IsOptional()
+  @IsString()
+  transactionPin?: string;
 }

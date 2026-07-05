@@ -112,4 +112,4 @@ For testing purposes, the system seeds the following users on startup:
 | 👤 **User** | Bob | `bob@example.com` | `rT4@nZ7&jQ1^cX3` |
 | 🛡️ **Admin**| Admin | `admin@securefin.com` | `Admin@SecureFin2026!` |
 
-*(Note: The Admin account can log in by clicking the secret "Admin Portal" toggle on the frontend login page).*
+*(Note: The Admin account can log in by clicking the "Admin Portal" toggle on the frontend login page).*

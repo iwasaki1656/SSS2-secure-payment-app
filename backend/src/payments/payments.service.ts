@@ -1,27 +1,111 @@
-import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { AuditService } from '../audit/audit.service';
+import { EmailService } from '../email/email.service';
 import { TransferDto } from './dto/transfer.dto';
 import { Payment } from '../database/models';
 import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 
 // ─── Fraud Detection Limits ───────────────────────────────────────────────────
 const SINGLE_TX_LIMIT = 20000;    // Max amount per single transaction
 const DAILY_LIMIT = 50000;        // Max total transferred in a 24-hour window
 
+// ─── 2FA Verification Constants ───────────────────────────────────────────────
+const VERIFICATION_CODE_LENGTH = 6;       // 6-digit numeric code
+const VERIFICATION_EXPIRY_MS = 5 * 60 * 1000;  // 5 minutes
+const MAX_VERIFICATION_ATTEMPTS = 3;      // Max wrong code attempts
+
+/** In-memory store for pending 2FA verification sessions */
+interface VerificationSession {
+  code: string;
+  senderId: string;
+  senderEmail: string;
+  attempts: number;
+  expiresAt: number;  // Unix timestamp in ms
+}
+
 @Injectable()
 export class PaymentsService {
+  // Security: In-memory map of pending 2FA verification sessions
+  private readonly verificationSessions = new Map<string, VerificationSession>();
+
   constructor(
     private readonly db: DatabaseService,
     private readonly auditService: AuditService,
+    private readonly emailService: EmailService,
   ) {}
+
+  /**
+   * Security: Generate a 6-digit verification code and send it to the sender's email.
+   * Returns a verificationId to correlate the code entry with this session.
+   */
+  async requestVerificationCode(senderId: string): Promise<{ verificationId: string }> {
+    const sender = this.db.users.get(senderId);
+    if (!sender) {
+      throw new NotFoundException({ code: 'SENDER_NOT_FOUND', message: 'Sender not found' });
+    }
+
+    if (sender.status === 'LIMITED') {
+      throw new UnprocessableEntityException({ code: 'ACCOUNT_LIMITED', message: 'Your account is currently limited.' });
+    }
+
+    // Generate cryptographically secure 6-digit code
+    const code = this.generateVerificationCode();
+    const verificationId = uuidv4();
+
+    // Store the session
+    this.verificationSessions.set(verificationId, {
+      code,
+      senderId,
+      senderEmail: sender.email,
+      attempts: 0,
+      expiresAt: Date.now() + VERIFICATION_EXPIRY_MS,
+    });
+
+    // Send the code via email
+    await this.emailService.sendVerificationCode(sender.email, code);
+
+    return { verificationId };
+  }
+
+  /**
+   * Security: Resend a new verification code for an existing session.
+   * The old code is invalidated and a new one is generated.
+   */
+  async resendVerificationCode(verificationId: string): Promise<{ verificationId: string }> {
+    const session = this.verificationSessions.get(verificationId);
+    if (!session) {
+      throw new BadRequestException({ code: 'SESSION_NOT_FOUND', message: 'Verification session not found or expired. Please request a new code.' });
+    }
+
+    // Check if already exceeded max attempts
+    if (session.attempts >= MAX_VERIFICATION_ATTEMPTS) {
+      this.verificationSessions.delete(verificationId);
+      throw new ForbiddenException({ code: 'MAX_ATTEMPTS_EXCEEDED', message: 'Maximum verification attempts exceeded. Please start a new transfer.' });
+    }
+
+    // Generate a new code (invalidates the old one)
+    const newCode = this.generateVerificationCode();
+    session.code = newCode;
+    session.expiresAt = Date.now() + VERIFICATION_EXPIRY_MS; // Reset expiry
+    // Note: attempts counter is NOT reset on resend
+
+    // Send the new code
+    await this.emailService.sendVerificationCode(session.senderEmail, newCode);
+
+    return { verificationId };
+  }
 
   async transfer(dto: TransferDto, idempotencyKey: string): Promise<Payment> {
     const amount = parseFloat(dto.amount);
     if (isNaN(amount) || amount <= 0) {
       throw new UnprocessableEntityException({ code: 'INVALID_AMOUNT', message: 'Amount must be > 0' });
     }
+
+    // ─── Security: 2FA Email Verification ──────────────────────────────────
+    this.verifyCode(dto.verificationId, dto.verificationCode, dto.senderId);
 
     // Resolve sender by ID
     const sender = this.db.users.get(dto.senderId);
@@ -111,6 +195,9 @@ export class PaymentsService {
 
     this.auditService.appendLog(paymentId, 'TRANSFER_COMPLETED', sender.id);
 
+    // Clean up the used verification session
+    this.verificationSessions.delete(dto.verificationId);
+
     return payment;
   }
 
@@ -141,5 +228,78 @@ export class PaymentsService {
         limit,
       },
     };
+  }
+
+  // ─── Private Helpers ──────────────────────────────────────────────────────
+
+  /** Generate a cryptographically secure 6-digit verification code */
+  private generateVerificationCode(): string {
+    // crypto.randomInt generates a secure random integer in [0, 10^6)
+    return randomInt(0, Math.pow(10, VERIFICATION_CODE_LENGTH)).toString().padStart(VERIFICATION_CODE_LENGTH, '0');
+  }
+
+  /**
+   * Security: Validate the 2FA verification code.
+   * Throws if expired, wrong sender, max attempts exceeded, or incorrect code.
+   */
+  private verifyCode(verificationId: string, verificationCode: string, senderId: string): void {
+    const session = this.verificationSessions.get(verificationId);
+
+    if (!session) {
+      throw new BadRequestException({
+        code: 'VERIFICATION_SESSION_NOT_FOUND',
+        message: 'Verification session not found or expired. Please request a new verification code.',
+      });
+    }
+
+    // Check expiry
+    if (Date.now() > session.expiresAt) {
+      this.verificationSessions.delete(verificationId);
+      throw new BadRequestException({
+        code: 'VERIFICATION_EXPIRED',
+        message: 'Verification code has expired. Please request a new code.',
+      });
+    }
+
+    // Check sender matches
+    if (session.senderId !== senderId) {
+      throw new ForbiddenException({
+        code: 'VERIFICATION_SENDER_MISMATCH',
+        message: 'Verification session does not match the sender.',
+      });
+    }
+
+    // Check max attempts
+    if (session.attempts >= MAX_VERIFICATION_ATTEMPTS) {
+      this.verificationSessions.delete(verificationId);
+      throw new ForbiddenException({
+        code: 'MAX_ATTEMPTS_EXCEEDED',
+        message: 'Maximum verification attempts (3) exceeded. Please request a new verification code.',
+        remainingAttempts: 0,
+      } as any);
+    }
+
+    // Validate code
+    if (session.code !== verificationCode) {
+      session.attempts += 1;
+      const remaining = MAX_VERIFICATION_ATTEMPTS - session.attempts;
+
+      if (remaining <= 0) {
+        this.verificationSessions.delete(verificationId);
+        throw new ForbiddenException({
+          code: 'INVALID_VERIFICATION_CODE',
+          message: `Incorrect verification code. All ${MAX_VERIFICATION_ATTEMPTS} attempts used. Please request a new code.`,
+          remainingAttempts: 0,
+        } as any);
+      }
+
+      throw new ForbiddenException({
+        code: 'INVALID_VERIFICATION_CODE',
+        message: `Incorrect verification code. ${remaining} attempt(s) remaining.`,
+        remainingAttempts: remaining,
+      } as any);
+    }
+
+    // Code is valid — session will be cleaned up after successful transfer
   }
 }

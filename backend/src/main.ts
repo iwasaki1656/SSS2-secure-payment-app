@@ -16,7 +16,7 @@ async function bootstrap() {
   app.enableCors({
     origin: process.env.FRONTEND_URL || 'http://localhost:3000',
     methods: ['GET', 'POST', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key', 'X-Simulate-Tamper', 'X-Simulate-Bad-Signature'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Idempotency-Key', 'X-Signature', 'X-Simulate-Tamper', 'X-Simulate-Bad-Signature'],
   });
 
   app.useGlobalPipes(new ValidationPipe({ transform: true, whitelist: true }));

@@ -26,4 +26,14 @@ export class TransferDto {
   @IsOptional()
   @IsString()
   transactionPin?: string;
+
+  // Security: Email 2FA — verification ID returned by /transfer/request-code
+  @IsString()
+  @IsNotEmpty()
+  verificationId!: string;
+
+  // Security: Email 2FA — 6-digit code sent to user's email
+  @IsString()
+  @IsNotEmpty()
+  verificationCode!: string;
 }

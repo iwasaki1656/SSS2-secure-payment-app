@@ -209,6 +209,17 @@ export default function Dashboard() {
   const [transferError, setTransferError] = useState<string | null>(null);
   const [transferSuccess, setTransferSuccess] = useState<any>(null);
 
+  // Security: 2FA Email Verification state
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verificationId, setVerificationId] = useState<string | null>(null);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+  const [remainingAttempts, setRemainingAttempts] = useState(3);
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
+  const [isResendingCode, setIsResendingCode] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [verificationSuccess, setVerificationSuccess] = useState<string | null>(null);
+
   // Attack Simulator state
   const [simulateTamper, setSimulateTamper] = useState(false);
   const [simulateBadSignature, setSimulateBadSignature] = useState(false);
@@ -507,7 +518,7 @@ export default function Dashboard() {
     }
   };
 
-  // Submit transfer request
+  // Security: 2FA — Step 1: Validate form, request verification code, show modal
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser) return;
@@ -522,9 +533,84 @@ export default function Dashboard() {
     const activeBalance = activeUser.balance?.[currency] ?? 0;
     if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toLocaleString(undefined, {minimumFractionDigits: 2})} ${currency}`); return; }
 
-    setIsTransferring(true);
+    // Request 2FA verification code
+    setIsRequestingCode(true);
     setTransferError(null);
     setTransferSuccess(null);
+    try {
+      const res = await fetch('/api/v1/payments/transfer/request-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senderId: activeUser.id }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.verificationId) {
+        setVerificationId(data.data.verificationId);
+        setVerificationCode('');
+        setVerificationError(null);
+        setVerificationSuccess(null);
+        setRemainingAttempts(3);
+        setShowVerificationModal(true);
+        // Start resend cooldown (30 seconds)
+        setResendCooldown(30);
+      } else {
+        setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Failed to send verification code'}`);
+      }
+    } catch (err: any) {
+      setTransferError(`Network error: ${err.message}`);
+    } finally {
+      setIsRequestingCode(false);
+    }
+  };
+
+  // Security: 2FA — Resend cooldown timer
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendCooldown]);
+
+  // Security: 2FA — Resend verification code
+  const handleResendCode = async () => {
+    if (!verificationId || resendCooldown > 0) return;
+    setIsResendingCode(true);
+    setVerificationError(null);
+    setVerificationSuccess(null);
+    try {
+      const res = await fetch('/api/v1/payments/transfer/resend-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verificationId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVerificationCode('');
+        setVerificationSuccess('新しい認証コードを送信しました / New code sent');
+        setResendCooldown(30);
+      } else {
+        // If session expired or max attempts, close modal
+        if (data.error?.code === 'SESSION_NOT_FOUND' || data.error?.code === 'MAX_ATTEMPTS_EXCEEDED') {
+          setShowVerificationModal(false);
+          setTransferError(`[${data.error.code}] ${data.error.message}`);
+        } else {
+          setVerificationError(data.error?.message || 'Failed to resend code');
+        }
+      }
+    } catch (err: any) {
+      setVerificationError(`Network error: ${err.message}`);
+    } finally {
+      setIsResendingCode(false);
+    }
+  };
+
+  // Security: 2FA — Step 2: Verify code and execute transfer
+  const handleVerifyAndTransfer = async () => {
+    if (!activeUser || !verificationId || verificationCode.length !== 6) return;
+    const numAmount = parseFloat(amount);
+
+    setIsTransferring(true);
+    setVerificationError(null);
+    setVerificationSuccess(null);
     try {
       const res = await fetch('/api/v1/payments/transfer', {
         method: 'POST',
@@ -537,12 +623,24 @@ export default function Dashboard() {
           'X-Simulate-Tamper': simulateTamper ? 'true' : 'false',
           'X-Simulate-Bad-Signature': simulateBadSignature ? 'true' : 'false'
         },
-        body: JSON.stringify({ senderId: activeUser.id, recipientId: recipientQuery.trim(), amount: parseFloat(amount).toFixed(2), currency, description, transactionPin: transferPin || undefined })
+        body: JSON.stringify({
+          senderId: activeUser.id,
+          recipientId: recipientQuery.trim(),
+          amount: parseFloat(amount).toFixed(2),
+          currency,
+          description,
+          transactionPin: transferPin || undefined,
+          verificationId,
+          verificationCode,
+        })
       });
       const data = await res.json();
       if (data.success) {
+        setShowVerificationModal(false);
         setTransferSuccess(data.data);
         setTransferPin('');
+        setVerificationId(null);
+        setVerificationCode('');
         setActiveUser((prev: any) => ({
           ...prev,
           balance: {
@@ -553,10 +651,26 @@ export default function Dashboard() {
         await fetchData(activeUser.id, activeUser);
         setIdempotencyKey(generateUuid());
       } else {
-        setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Transfer failed'}`);
+        // Handle verification-specific errors
+        if (data.error?.code === 'INVALID_VERIFICATION_CODE') {
+          const remaining = data.error?.remainingAttempts ?? (remainingAttempts - 1);
+          setRemainingAttempts(remaining);
+          if (remaining <= 0) {
+            setShowVerificationModal(false);
+            setTransferError(`[${data.error.code}] ${data.error.message}`);
+          } else {
+            setVerificationError(`認証コードが正しくありません。残り${remaining}回 / Incorrect code. ${remaining} attempt(s) remaining.`);
+          }
+        } else if (data.error?.code === 'VERIFICATION_EXPIRED' || data.error?.code === 'MAX_ATTEMPTS_EXCEEDED' || data.error?.code === 'VERIFICATION_SESSION_NOT_FOUND') {
+          setShowVerificationModal(false);
+          setTransferError(`[${data.error.code}] ${data.error.message}`);
+        } else {
+          setShowVerificationModal(false);
+          setTransferError(`[${data.error?.code || 'ERROR'}] ${data.error?.message || 'Transfer failed'}`);
+        }
       }
     } catch (err: any) {
-      setTransferError(`Network error: ${err.message}`);
+      setVerificationError(`Network error: ${err.message}`);
     } finally {
       setIsTransferring(false);
     }
@@ -1170,10 +1284,12 @@ export default function Dashboard() {
                   <div className="flex gap-2">
                     <button
                       type="submit"
-                      disabled={isTransferring}
+                      disabled={isTransferring || isRequestingCode}
                       className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
-                      {isTransferring ? (
+                      {isRequestingCode ? (
+                        <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Sending Code...</span></>
+                      ) : isTransferring ? (
                         <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
                       ) : (
                         <>
@@ -1188,7 +1304,7 @@ export default function Dashboard() {
                     {/* Retry button to trigger exact replay check */}
                     <button
                       type="button"
-                      disabled={isTransferring || !idempotencyKey}
+                      disabled={isTransferring || isRequestingCode || !idempotencyKey}
                       onClick={handleTransfer}
                       title="Sends the exact same payload again with the exact same Idempotency Key"
                       className={`px-3 py-2 border rounded-xl transition-colors text-xs font-mono font-bold cursor-pointer disabled:opacity-50 ${t.btnSecondary}`}
@@ -1727,6 +1843,194 @@ export default function Dashboard() {
           </div>
         )}
       </main>
+
+      {/* ─── Security: 2FA Email Verification Modal ─────────────────────────── */}
+      {showVerificationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}>
+          <div
+            className={`w-full max-w-md border rounded-2xl shadow-2xl p-6 sm:p-8 relative ${isDark ? 'bg-[#0e1629] border-zinc-700' : 'bg-white border-slate-200'}`}
+            style={{ animation: 'fadeInScale 0.3s ease-out' }}
+          >
+            {/* Header */}
+            <div className="text-center mb-6">
+              <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center text-3xl ${isDark ? 'bg-cyan-950/50 border border-cyan-800/50' : 'bg-cyan-50 border border-cyan-200'}`}>
+                🔐
+              </div>
+              <h3 className={`text-lg font-bold ${isDark ? 'text-zinc-100' : 'text-slate-900'}`}>
+                認証コードを入力 / Enter Verification Code
+              </h3>
+              <p className={`text-xs mt-2 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                {activeUser?.email} に6桁の認証コードを送信しました。
+                <br />A 6-digit code was sent to your email.
+              </p>
+            </div>
+
+            {/* 6-digit Code Input */}
+            <div className="mb-5">
+              <div className="flex justify-center gap-2">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <input
+                    key={i}
+                    id={`verification-code-input-${i}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={verificationCode[i] || ''}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      if (val.length <= 1) {
+                        const newCode = verificationCode.split('');
+                        newCode[i] = val;
+                        setVerificationCode(newCode.join(''));
+                        // Auto-advance to next input
+                        if (val && i < 5) {
+                          const next = document.getElementById(`verification-code-input-${i + 1}`);
+                          next?.focus();
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      // Handle backspace to go to previous input
+                      if (e.key === 'Backspace' && !verificationCode[i] && i > 0) {
+                        const prev = document.getElementById(`verification-code-input-${i - 1}`);
+                        prev?.focus();
+                      }
+                    }}
+                    onPaste={(e) => {
+                      e.preventDefault();
+                      const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+                      setVerificationCode(pasted);
+                      // Focus last filled or next empty
+                      const focusIdx = Math.min(pasted.length, 5);
+                      const el = document.getElementById(`verification-code-input-${focusIdx}`);
+                      el?.focus();
+                    }}
+                    className={`w-11 h-13 text-center text-xl font-mono font-bold border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all ${
+                      isDark
+                        ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
+                        : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    autoFocus={i === 0}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Remaining Attempts */}
+            <div className="text-center mb-4">
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono ${
+                remainingAttempts <= 1
+                  ? 'bg-rose-950/30 border border-rose-800 text-rose-400'
+                  : isDark
+                    ? 'bg-zinc-800 border border-zinc-700 text-zinc-400'
+                    : 'bg-slate-100 border border-slate-200 text-slate-500'
+              }`}>
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                残り {remainingAttempts} 回 / {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {verificationError && (
+              <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border mb-4 ${isDark ? 'bg-rose-950/40 border-rose-800 text-rose-300' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="break-all">{verificationError}</div>
+              </div>
+            )}
+
+            {/* Success Message (resend) */}
+            {verificationSuccess && (
+              <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border mb-4 ${isDark ? 'bg-emerald-950/30 border-emerald-800 text-emerald-300' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
+                <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>{verificationSuccess}</div>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              <button
+                onClick={handleVerifyAndTransfer}
+                disabled={verificationCode.length !== 6 || isTransferring}
+                className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 flex justify-center items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isTransferring ? (
+                  <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>認証中... / Verifying...</span></>
+                ) : (
+                  <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg><span>認証して送金 / Verify & Transfer</span></>
+                )}
+              </button>
+
+              <div className="flex gap-2">
+                {/* Resend Code Button */}
+                <button
+                  onClick={handleResendCode}
+                  disabled={isResendingCode || resendCooldown > 0}
+                  className={`flex-1 py-2.5 px-3 border rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isDark
+                      ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600'
+                  }`}
+                >
+                  {isResendingCode ? (
+                    <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                  )}
+                  {resendCooldown > 0
+                    ? `再送信 (${resendCooldown}s)`
+                    : '認証コードを再送信 / Resend Code'}
+                </button>
+
+                {/* Cancel Button */}
+                <button
+                  onClick={() => {
+                    setShowVerificationModal(false);
+                    setVerificationId(null);
+                    setVerificationCode('');
+                    setVerificationError(null);
+                    setVerificationSuccess(null);
+                  }}
+                  disabled={isTransferring}
+                  className={`py-2.5 px-4 border rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 ${
+                    isDark
+                      ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-500'
+                  }`}
+                >
+                  キャンセル
+                </button>
+              </div>
+            </div>
+
+            {/* Timer Notice */}
+            <p className={`text-center text-[10px] mt-4 ${isDark ? 'text-zinc-600' : 'text-slate-400'}`}>
+              ⏱ コードの有効期限: 5分 / Code expires in 5 minutes
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Modal animation keyframes */}
+      <style jsx>{`
+        @keyframes fadeInScale {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -585,7 +585,7 @@ export default function Dashboard() {
       const data = await res.json();
       if (data.success) {
         setVerificationCode('');
-        setVerificationSuccess('新しい認証コードを送信しました / New code sent');
+        setVerificationSuccess('A new verification code has been sent to your email.');
         setResendCooldown(30);
       } else {
         // If session expired or max attempts, close modal
@@ -659,7 +659,7 @@ export default function Dashboard() {
             setShowVerificationModal(false);
             setTransferError(`[${data.error.code}] ${data.error.message}`);
           } else {
-            setVerificationError(`認証コードが正しくありません。残り${remaining}回 / Incorrect code. ${remaining} attempt(s) remaining.`);
+            setVerificationError(`Incorrect verification code. ${remaining} attempt(s) remaining.`);
           }
         } else if (data.error?.code === 'VERIFICATION_EXPIRED' || data.error?.code === 'MAX_ATTEMPTS_EXCEEDED' || data.error?.code === 'VERIFICATION_SESSION_NOT_FOUND') {
           setShowVerificationModal(false);
@@ -1857,11 +1857,11 @@ export default function Dashboard() {
                 🔐
               </div>
               <h3 className={`text-lg font-bold ${isDark ? 'text-zinc-100' : 'text-slate-900'}`}>
-                認証コードを入力 / Enter Verification Code
+                Enter Verification Code
               </h3>
               <p className={`text-xs mt-2 ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
-                {activeUser?.email} に6桁の認証コードを送信しました。
-                <br />A 6-digit code was sent to your email.
+                A 6-digit verification code has been sent to <strong>{activeUser?.email}</strong>.
+                <br />Please enter the code below to authorize your transfer.
               </p>
             </div>
 
@@ -1928,7 +1928,7 @@ export default function Dashboard() {
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
-                残り {remainingAttempts} 回 / {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining
+                {remainingAttempts} attempt{remainingAttempts !== 1 ? 's' : ''} remaining
               </div>
             </div>
 
@@ -1960,9 +1960,9 @@ export default function Dashboard() {
                 className="w-full bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 flex justify-center items-center gap-2 cursor-pointer disabled:cursor-not-allowed"
               >
                 {isTransferring ? (
-                  <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>認証中... / Verifying...</span></>
+                  <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Verifying...</span></>
                 ) : (
-                  <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg><span>認証して送金 / Verify & Transfer</span></>
+                  <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg><span>Verify & Transfer</span></>
                 )}
               </button>
 
@@ -1985,8 +1985,8 @@ export default function Dashboard() {
                     </svg>
                   )}
                   {resendCooldown > 0
-                    ? `再送信 (${resendCooldown}s)`
-                    : '認証コードを再送信 / Resend Code'}
+                    ? `Resend (${resendCooldown}s)`
+                    : 'Resend Code'}
                 </button>
 
                 {/* Cancel Button */}
@@ -2005,14 +2005,14 @@ export default function Dashboard() {
                       : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-500'
                   }`}
                 >
-                  キャンセル
+                  Cancel
                 </button>
               </div>
             </div>
 
             {/* Timer Notice */}
             <p className={`text-center text-[10px] mt-4 ${isDark ? 'text-zinc-600' : 'text-slate-400'}`}>
-              ⏱ コードの有効期限: 5分 / Code expires in 5 minutes
+              ⏱ Code expires in 5 minutes
             </p>
           </div>
         </div>

@@ -195,6 +195,19 @@ export class PaymentsService {
 
     this.auditService.appendLog(paymentId, 'TRANSFER_COMPLETED', sender.id);
 
+    // Notify the recipient via email (fire-and-forget, non-blocking)
+    this.emailService
+      .sendTransferNotification(
+        recipient.email,
+        sender.username || sender.email,
+        dto.amount,
+        dto.currency,
+        dto.description || '',
+      )
+      .catch(() => {
+        // Silently ignore email delivery failures — the transfer is already complete
+      });
+
     // Clean up the used verification session
     this.verificationSessions.delete(dto.verificationId);
 

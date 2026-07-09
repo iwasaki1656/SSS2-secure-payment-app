@@ -1,5 +1,6 @@
-import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { maskSensitiveData } from '../utils/masking.util';
 import { AuditService } from '../audit/audit.service';
 import { EmailService } from '../email/email.service';
 import { TransferDto } from './dto/transfer.dto';
@@ -28,6 +29,8 @@ interface VerificationSession {
 
 @Injectable()
 export class PaymentsService {
+  private readonly logger = new Logger(PaymentsService.name);
+  
   // Security: In-memory map of pending 2FA verification sessions
   private readonly verificationSessions = new Map<string, VerificationSession>();
 
@@ -99,7 +102,8 @@ export class PaymentsService {
   }
 
   async transfer(dto: TransferDto, idempotencyKey: string): Promise<Payment> {
-    const amount = parseFloat(dto.amount);
+    const amount = dto.amount;
+    // Amount is already validated by TransferDto as > 0, but we can keep a secondary check
     if (isNaN(amount) || amount <= 0) {
       throw new UnprocessableEntityException({ code: 'INVALID_AMOUNT', message: 'Amount must be > 0' });
     }
@@ -183,7 +187,7 @@ export class PaymentsService {
       paymentId,
       senderId: sender.id,
       recipientId: recipient.id, // Always store the canonical user ID
-      amount: dto.amount,
+      amount: dto.amount.toString(),
       currency: dto.currency,
       description: dto.description || '',
       idempotencyKey,
@@ -194,13 +198,17 @@ export class PaymentsService {
     this.db.payments.set(paymentId, payment);
 
     this.auditService.appendLog(paymentId, 'TRANSFER_COMPLETED', sender.id);
+    
+    // Secure Logging: log the transfer request with masked sensitive data
+    const maskedPayload = maskSensitiveData({ ...dto, email: sender.email });
+    this.logger.log(`TRANSFER_COMPLETED: ${JSON.stringify(maskedPayload)}`);
 
     // Notify the recipient via email (fire-and-forget, non-blocking)
     this.emailService
       .sendTransferNotification(
         recipient.email,
         sender.username || sender.email,
-        dto.amount,
+        dto.amount.toString(),
         dto.currency,
         dto.description || '',
       )

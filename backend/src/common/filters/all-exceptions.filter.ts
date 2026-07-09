@@ -31,7 +31,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message = resp;
       }
     } else if (exception instanceof Error) {
-      message = exception.message;
+      console.error('Unhandled Exception:', exception);
+      message = 'Internal server error';
     }
 
     // specific mappings based on requirements

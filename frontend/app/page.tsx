@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { z } from 'zod';
 
 // Pre-seeded users in our Fintech prototype system (IDs must match backend database.service.ts)
 const PRESEEDED_USERS = [
@@ -522,9 +523,20 @@ export default function Dashboard() {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser) return;
-    const numAmount = parseFloat(amount);
-    if (isNaN(numAmount) || numAmount <= 0) { setTransferError('Validation Error: Amount must be greater than 0'); return; }
-    if (!recipientQuery.trim()) { setTransferError('Validation Error: Please enter a recipient email, username, or ID'); return; }
+    
+    // Zod validation
+    const transferSchema = z.object({
+      amount: z.coerce.number().positive('Validation Error: Amount must be greater than 0'),
+      recipientQuery: z.string().min(1, 'Validation Error: Please enter a recipient email, username, or ID'),
+    });
+
+    const result = transferSchema.safeParse({ amount, recipientQuery: recipientQuery.trim() });
+    if (!result.success) {
+      setTransferError(result.error.issues[0].message);
+      return;
+    }
+    
+    const numAmount = result.data.amount;
     // Check if recipient resolves to self
     const selfUser = PRESEEDED_USERS.find((u) => u.id === activeUser.id);
     const querySelf = recipientQuery.trim() === activeUser.id || recipientQuery.trim() === activeUser.email || recipientQuery.trim() === (activeUser.username || selfUser?.username);
@@ -626,7 +638,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           senderId: activeUser.id,
           recipientId: recipientQuery.trim(),
-          amount: parseFloat(amount).toFixed(2),
+          amount: Number(amount),
           currency,
           description,
           transactionPin: transferPin || undefined,
@@ -1190,7 +1202,9 @@ export default function Dashboard() {
                     <div className="col-span-2">
                       <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Amount</label>
                       <input
-                        type="text"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         placeholder="Amount"

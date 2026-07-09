@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumberString, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, Matches } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class TransferDto {
   @IsString()
@@ -9,9 +10,10 @@ export class TransferDto {
   @IsNotEmpty()
   recipientId!: string;
 
-  @IsNumberString()
-  @IsNotEmpty()
-  amount!: string;
+  @IsNumber()
+  @Min(0.01, { message: 'Amount must be greater than 0' })
+  @Type(() => Number)
+  amount!: number;
 
   @IsString()
   @IsNotEmpty()

@@ -19,7 +19,7 @@ function validatePassword(pw: string): string | null {
 }
 
 // Rudimentary fake domain check (mirrors backend blocklist)
-const BLOCKED_DOMAINS = ['mailinator.com','guerrillamail.com','tempmail.com','yopmail.com','trashmail.com','fakeinbox.com','maildrop.cc','discard.email','spambox.us'];
+const BLOCKED_DOMAINS = ['mailinator.com', 'guerrillamail.com', 'tempmail.com', 'yopmail.com', 'trashmail.com', 'fakeinbox.com', 'maildrop.cc', 'discard.email', 'spambox.us'];
 function isFakeDomain(email: string): boolean {
   const domain = email.split('@')[1]?.toLowerCase();
   return domain ? BLOCKED_DOMAINS.includes(domain) : false;
@@ -523,7 +523,7 @@ export default function Dashboard() {
   const handleTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeUser) return;
-    
+
     // Zod validation
     const transferSchema = z.object({
       amount: z.coerce.number().positive('Validation Error: Amount must be greater than 0'),
@@ -535,7 +535,7 @@ export default function Dashboard() {
       setTransferError(result.error.issues[0].message);
       return;
     }
-    
+
     const numAmount = result.data.amount;
     // Check if recipient resolves to self
     const selfUser = PRESEEDED_USERS.find((u) => u.id === activeUser.id);
@@ -543,7 +543,7 @@ export default function Dashboard() {
     if (querySelf) { setTransferError('Validation Error: Cannot transfer money to yourself'); return; }
     // Client-side balance pre-check (authoritative check is on the backend)
     const activeBalance = activeUser.balance?.[currency] ?? 0;
-    if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toLocaleString(undefined, {minimumFractionDigits: 2})} ${currency}`); return; }
+    if (numAmount > activeBalance) { setTransferError(`Validation Error: Insufficient balance. You have ${activeBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })} ${currency}`); return; }
 
     // Request 2FA verification code
     setIsRequestingCode(true);
@@ -940,7 +940,7 @@ export default function Dashboard() {
                   </p>
                   {loginPortalMode === 'ADMIN' && !showSignUp && (
                     <span className={`inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-xs font-semibold border ${isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-50 border-violet-300 text-violet-600'}`}>
-                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z" /></svg>
                       Staff Portal
                     </span>
                   )}
@@ -1149,186 +1149,186 @@ export default function Dashboard() {
 
               {/* Dynamic Balance Board — hidden for Admin accounts */}
               {activeUser?.role !== 'ADMIN' && (
-              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
-                <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  {Object.entries(userBalances[activeUser.id] || activeUser.balance || {}).map(([cur, bal]: any) => (
-                    <div key={cur} className={`border p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center ${t.balanceCard}`}>
-                      <span className={`text-[10px] sm:text-xs font-mono font-semibold ${t.textMuted}`}>{cur}</span>
-                      <span className="text-xs sm:text-sm font-bold mt-1">
-                        {bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </div>
-                  ))}
+                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 ${t.card}`}>
+                  <h3 className={`text-xs font-mono uppercase tracking-wider ${t.labelMuted}`}>Account Balances</h3>
+                  <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                    {Object.entries(userBalances[activeUser.id] || activeUser.balance || {}).map(([cur, bal]: any) => (
+                      <div key={cur} className={`border p-2 sm:p-3 rounded-lg sm:rounded-xl flex flex-col items-center ${t.balanceCard}`}>
+                        <span className={`text-[10px] sm:text-xs font-mono font-semibold ${t.textMuted}`}>{cur}</span>
+                        <span className="text-xs sm:text-sm font-bold mt-1">
+                          {bal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
               )}
 
               {/* Interactive Transfer Form Panel — hidden for Admin accounts */}
               {activeUser?.role !== 'ADMIN' && (
-              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
-                <h3 className="text-md font-bold mb-4 flex items-center gap-2 text-cyan-400">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-20c5.303 0 9.697 4.303 9.697 9.697 0 5.303-4.303 9.697-9.697 9.697C6.697 21.697 2.3 17.303 2.3 12 2.3 6.697 6.697 2.3 12 2.3z" />
-                  </svg>
-                  Transfer Funds
-                </h3>
-
-                {activeUser?.status === 'LIMITED' ? (
-                  <div className={`rounded-xl p-5 text-sm flex gap-3 items-start border ${t.errorMsg}`}>
-                    <svg className="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
+                  <h3 className="text-md font-bold mb-4 flex items-center gap-2 text-cyan-400">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-20c5.303 0 9.697 4.303 9.697 9.697 0 5.303-4.303 9.697-9.697 9.697C6.697 21.697 2.3 17.303 2.3 12 2.3 6.697 6.697 2.3 12 2.3z" />
                     </svg>
-                    <div>
-                      <h4 className="font-bold text-base mb-1">Account Limited</h4>
-                      <p className="opacity-90">Your account is currently limited. You can only view your balance. You cannot initiate new transfers until your account status is restored.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <form onSubmit={handleTransfer} className="space-y-4">
-                  <div>
-                    <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Recipient</label>
-                    <input
-                      id="transfer-recipient-input"
-                      type="text"
-                      value={recipientQuery}
-                      onChange={(e) => setRecipientQuery(e.target.value)}
-                      placeholder="Email, username, or user ID"
-                      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium ${t.input}`}
-                    />
-                  </div>
+                    Transfer Funds
+                  </h3>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Amount</label>
-                      <input
-                        type="number"
-                        min="0.01"
-                        step="0.01"
-                        value={amount}
-                        onChange={(e) => setAmount(e.target.value)}
-                        placeholder="Amount"
-                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Currency</label>
-                      <select
-                        value={currency}
-                        onChange={(e) => setCurrency(e.target.value)}
-                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
-                      >
-                        <option value="JPY">JPY</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Description</label>
-                    <input
-                      type="text"
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 ${t.input}`}
-                    />
-                  </div>
-
-                  {/* Security: Transaction PIN — only shown if user has set one */}
-                  {activeUser?.transactionPinSet && (
-                    <div>
-                      <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>
-                        🔐 Transaction PIN <span className="text-rose-400">*required</span>
-                      </label>
-                      <input
-                        id="transfer-pin-input"
-                        type="password"
-                        inputMode="numeric"
-                        maxLength={4}
-                        value={transferPin}
-                        onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                        placeholder="Enter your 4-digit PIN"
-                        className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono tracking-widest ${t.input}`}
-                      />
-                    </div>
-                  )}
-
-                  {/* Idempotency Key Section */}
-                  <div className={`p-3 rounded-xl border space-y-2 ${t.idempotency}`}>
-                    <div className="flex justify-between items-center">
-                      <span className={`text-[10px] font-mono ${t.textMuted}`}>IDEMPOTENCY KEY</span>
-                      <button
-                        type="button"
-                        onClick={() => setIdempotencyKey(generateUuid())}
-                        className="text-[10px] text-cyan-400 font-bold hover:underline cursor-pointer"
-                      >
-                        Regenerate
-                      </button>
-                    </div>
-                    <div className={`text-[11px] font-mono break-all select-all font-semibold p-2 rounded border ${t.idempotencyVal}`}>
-                      {idempotencyKey}
-                    </div>
-                  </div>
-
-                  {/* Errors and Success feedback */}
-                  {transferError && (
-                    <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.errorMsg}`}>
-                      <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {activeUser?.status === 'LIMITED' ? (
+                    <div className={`rounded-xl p-5 text-sm flex gap-3 items-start border ${t.errorMsg}`}>
+                      <svg className="w-6 h-6 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <div className="break-all">{transferError}</div>
-                    </div>
-                  )}
-
-                  {transferSuccess && (
-                    <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.successMsg}`}>
-                      <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
                       <div>
-                        <p className={`font-bold ${t.successTitle}`}>Success!</p>
-                        <p className="mt-1">ID: {transferSuccess.paymentId}</p>
-                        <p>Status: {transferSuccess.status}</p>
-                        <p>Key: {transferSuccess.idempotencyKey.substring(0, 8)}...</p>
+                        <h4 className="font-bold text-base mb-1">Account Limited</h4>
+                        <p className="opacity-90">Your account is currently limited. You can only view your balance. You cannot initiate new transfers until your account status is restored.</p>
                       </div>
                     </div>
-                  )}
+                  ) : (
+                    <form onSubmit={handleTransfer} className="space-y-4">
+                      <div>
+                        <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Recipient</label>
+                        <input
+                          id="transfer-recipient-input"
+                          type="text"
+                          value={recipientQuery}
+                          onChange={(e) => setRecipientQuery(e.target.value)}
+                          placeholder="Email, username, or user ID"
+                          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-medium ${t.input}`}
+                        />
+                      </div>
 
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={isTransferring || isRequestingCode}
-                      className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                    >
-                      {isRequestingCode ? (
-                        <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Sending Code...</span></>
-                      ) : isTransferring ? (
-                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                          </svg>
-                          <span>Send Payment</span>
-                        </>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="col-span-2">
+                          <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Amount</label>
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            value={amount}
+                            onChange={(e) => setAmount(e.target.value)}
+                            placeholder="Amount"
+                            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Currency</label>
+                          <select
+                            value={currency}
+                            onChange={(e) => setCurrency(e.target.value)}
+                            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono ${t.input}`}
+                          >
+                            <option value="JPY">JPY</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>Description</label>
+                        <input
+                          type="text"
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 ${t.input}`}
+                        />
+                      </div>
+
+                      {/* Security: Transaction PIN — only shown if user has set one */}
+                      {activeUser?.transactionPinSet && (
+                        <div>
+                          <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>
+                            🔐 Transaction PIN <span className="text-rose-400">*required</span>
+                          </label>
+                          <input
+                            id="transfer-pin-input"
+                            type="password"
+                            inputMode="numeric"
+                            maxLength={4}
+                            value={transferPin}
+                            onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            placeholder="Enter your 4-digit PIN"
+                            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono tracking-widest ${t.input}`}
+                          />
+                        </div>
                       )}
-                    </button>
 
-                    {/* Retry button to trigger exact replay check */}
-                    <button
-                      type="button"
-                      disabled={isTransferring || isRequestingCode || !idempotencyKey}
-                      onClick={handleTransfer}
-                      title="Sends the exact same payload again with the exact same Idempotency Key"
-                      className={`px-3 py-2 border rounded-xl transition-colors text-xs font-mono font-bold cursor-pointer disabled:opacity-50 ${t.btnSecondary}`}
-                    >
-                      Replay
-                    </button>
-                  </div>
-                </form>
-                )}
-              </div>
+                      {/* Idempotency Key Section */}
+                      <div className={`p-3 rounded-xl border space-y-2 ${t.idempotency}`}>
+                        <div className="flex justify-between items-center">
+                          <span className={`text-[10px] font-mono ${t.textMuted}`}>IDEMPOTENCY KEY</span>
+                          <button
+                            type="button"
+                            onClick={() => setIdempotencyKey(generateUuid())}
+                            className="text-[10px] text-cyan-400 font-bold hover:underline cursor-pointer"
+                          >
+                            Regenerate
+                          </button>
+                        </div>
+                        <div className={`text-[11px] font-mono break-all select-all font-semibold p-2 rounded border ${t.idempotencyVal}`}>
+                          {idempotencyKey}
+                        </div>
+                      </div>
+
+                      {/* Errors and Success feedback */}
+                      {transferError && (
+                        <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.errorMsg}`}>
+                          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                          </svg>
+                          <div className="break-all">{transferError}</div>
+                        </div>
+                      )}
+
+                      {transferSuccess && (
+                        <div className={`rounded-xl p-3 text-xs flex gap-2 items-start font-mono border ${t.successMsg}`}>
+                          <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div>
+                            <p className={`font-bold ${t.successTitle}`}>Success!</p>
+                            <p className="mt-1">ID: {transferSuccess.paymentId}</p>
+                            <p>Status: {transferSuccess.status}</p>
+                            <p>Key: {transferSuccess.idempotencyKey.substring(0, 8)}...</p>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          disabled={isTransferring || isRequestingCode}
+                          className="flex-1 bg-cyan-500 hover:bg-cyan-400 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-lg shadow-cyan-500/20 flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isRequestingCode ? (
+                            <><span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span><span>Sending Code...</span></>
+                          ) : isTransferring ? (
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                              </svg>
+                              <span>Send Payment</span>
+                            </>
+                          )}
+                        </button>
+
+                        {/* Retry button to trigger exact replay check */}
+                        <button
+                          type="button"
+                          disabled={isTransferring || isRequestingCode || !idempotencyKey}
+                          onClick={handleTransfer}
+                          title="Sends the exact same payload again with the exact same Idempotency Key"
+                          className={`px-3 py-2 border rounded-xl transition-colors text-xs font-mono font-bold cursor-pointer disabled:opacity-50 ${t.btnSecondary}`}
+                        >
+                          Replay
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               )}
             </div>
 
@@ -1408,451 +1408,448 @@ export default function Dashboard() {
                 </div>
               ) : (<>
 
-              {/* Tab Selector — tabs available depend on role */}
-              <div className={`flex border-b ${t.divider}`}>
-                {/* Admin Dashboard tab — ADMIN only */}
-                {activeUser?.role === 'ADMIN' && (
-                  <button
-                    onClick={() => { setActiveTab('admin'); fetchAdminData(); }}
-                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'admin' ? (isDark ? 'border-violet-500 text-violet-400 bg-violet-950/10' : 'border-violet-500 text-violet-600 bg-violet-50') : t.tabInactive}`}
-                  >
-                    🛡️ Admin Dashboard
-                  </button>
-                )}
-                {/* Payment Activity tab — USER only (admins use All Transactions in Admin Dashboard) */}
-                {activeUser?.role !== 'ADMIN' && (
-                  <button
-                    onClick={() => setActiveTab('form')}
-                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'form' ? t.tabActive : t.tabInactive}`}
-                  >
-                    Payment Activity
-                  </button>
-                )}
-                {/* Cryptographic Audit Chain tab — ADMIN only */}
-                {activeUser?.role === 'ADMIN' && (
-                  <button
-                    onClick={() => setActiveTab('logs')}
-                    className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'logs' ? t.tabActive : t.tabInactive}`}
-                  >
-                    Audit Chain ({auditLogs.length})
-                  </button>
-                )}
-              </div>
-
-              {activeTab === 'admin' && activeUser?.role === 'ADMIN' && (
-                /* ─── ADMIN DASHBOARD ─── */
-                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-6 ${t.card}`}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-xl border ${isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-100 border-violet-300 text-violet-600'}`}>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-lg">Admin Dashboard</h3>
-                        <p className={`text-xs ${t.labelMuted}`}>Manage users and monitor all system activity.</p>
-                      </div>
-                    </div>
-                    <button onClick={fetchAdminData} disabled={isLoadingAdmin} className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`} title="Refresh">
-                      <svg className={`w-4 h-4 ${isLoadingAdmin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 6h-2.182" /></svg>
+                {/* Tab Selector — tabs available depend on role */}
+                <div className={`flex border-b ${t.divider}`}>
+                  {/* Admin Dashboard tab — ADMIN only */}
+                  {activeUser?.role === 'ADMIN' && (
+                    <button
+                      onClick={() => { setActiveTab('admin'); fetchAdminData(); }}
+                      className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'admin' ? (isDark ? 'border-violet-500 text-violet-400 bg-violet-950/10' : 'border-violet-500 text-violet-600 bg-violet-50') : t.tabInactive}`}
+                    >
+                      🛡️ Admin Dashboard
                     </button>
-                  </div>
-
-                  {/* Admin Sub-tabs */}
-                  <div className={`flex rounded-xl border p-1 gap-1 ${t.cardInner}`}>
-                    <button onClick={() => setAdminTab('users')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'users' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
-                      👥 User Management ({adminUsers.length})
-                    </button>
-                    <button onClick={() => setAdminTab('transactions')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'transactions' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
-                      💳 All Transactions ({adminTransactions.length})
-                    </button>
-                  </div>
-
-                  {/* Action message */}
-                  {adminActionMsg && (
-                    <div className={`rounded-xl p-3 text-sm border ${adminActionMsg.startsWith('Error') ? t.errorMsg : t.successMsg}`}>
-                      {adminActionMsg}
-                    </div>
                   )}
+                  {/* Payment Activity tab — USER only (admins use All Transactions in Admin Dashboard) */}
+                  {activeUser?.role !== 'ADMIN' && (
+                    <button
+                      onClick={() => setActiveTab('form')}
+                      className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'form' ? t.tabActive : t.tabInactive}`}
+                    >
+                      Payment Activity
+                    </button>
+                  )}
+                  {/* Cryptographic Audit Chain tab — ADMIN only */}
+                  {activeUser?.role === 'ADMIN' && (
+                    <button
+                      onClick={() => setActiveTab('logs')}
+                      className={`px-5 py-3 text-sm font-bold border-b-2 transition-all cursor-pointer ${activeTab === 'logs' ? t.tabActive : t.tabInactive}`}
+                    >
+                      Audit Chain ({auditLogs.length})
+                    </button>
+                  )}
+                </div>
 
-                  {adminTab === 'users' ? (
-                    /* User list */
-                    <div className="overflow-x-auto">
-                      {adminUsers.length === 0 ? (
-                        <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No users found.</div>
-                      ) : (
-                        <table className="w-full text-left text-xs font-mono">
-                          <thead>
-                            <tr className={t.tableHead}>
-                              <th className="py-3 px-2">User</th>
-                              <th className="py-3 px-2">Role</th>
-                              <th className="py-3 px-2">Status</th>
-                              <th className="py-3 px-2 text-right">Actions</th>
-                            </tr>
-                          </thead>
-                          <tbody className={t.tableDivide}>
-                            {adminUsers.map((u: any) => (
-                              <tr key={u.id} className={t.tableHover}>
-                                <td className="py-3 px-2">
-                                  <p className={`font-bold ${t.textSub}`}>{u.username}</p>
-                                  <p className={`text-[10px] ${t.textMuted}`}>{u.email}</p>
-                                </td>
-                                <td className="py-3 px-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                    u.role === 'ADMIN'
+                {activeTab === 'admin' && activeUser?.role === 'ADMIN' && (
+                  /* ─── ADMIN DASHBOARD ─── */
+                  <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-6 ${t.card}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-xl border ${isDark ? 'bg-violet-950/40 border-violet-800 text-violet-400' : 'bg-violet-100 border-violet-300 text-violet-600'}`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-lg">Admin Dashboard</h3>
+                          <p className={`text-xs ${t.labelMuted}`}>Manage users and monitor all system activity.</p>
+                        </div>
+                      </div>
+                      <button onClick={fetchAdminData} disabled={isLoadingAdmin} className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`} title="Refresh">
+                        <svg className={`w-4 h-4 ${isLoadingAdmin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 6h-2.182" /></svg>
+                      </button>
+                    </div>
+
+                    {/* Admin Sub-tabs */}
+                    <div className={`flex rounded-xl border p-1 gap-1 ${t.cardInner}`}>
+                      <button onClick={() => setAdminTab('users')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'users' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
+                        👥 User Management ({adminUsers.length})
+                      </button>
+                      <button onClick={() => setAdminTab('transactions')} className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all cursor-pointer ${adminTab === 'transactions' ? (isDark ? 'bg-violet-600 text-white shadow-lg shadow-violet-500/20' : 'bg-violet-500 text-white shadow-lg') : t.labelMuted}`}>
+                        💳 All Transactions ({adminTransactions.length})
+                      </button>
+                    </div>
+
+                    {/* Action message */}
+                    {adminActionMsg && (
+                      <div className={`rounded-xl p-3 text-sm border ${adminActionMsg.startsWith('Error') ? t.errorMsg : t.successMsg}`}>
+                        {adminActionMsg}
+                      </div>
+                    )}
+
+                    {adminTab === 'users' ? (
+                      /* User list */
+                      <div className="overflow-x-auto">
+                        {adminUsers.length === 0 ? (
+                          <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No users found.</div>
+                        ) : (
+                          <table className="w-full text-left text-xs font-mono">
+                            <thead>
+                              <tr className={t.tableHead}>
+                                <th className="py-3 px-2">User</th>
+                                <th className="py-3 px-2">Role</th>
+                                <th className="py-3 px-2">Status</th>
+                                <th className="py-3 px-2 text-right">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className={t.tableDivide}>
+                              {adminUsers.map((u: any) => (
+                                <tr key={u.id} className={t.tableHover}>
+                                  <td className="py-3 px-2">
+                                    <p className={`font-bold ${t.textSub}`}>{u.username}</p>
+                                    <p className={`text-[10px] ${t.textMuted}`}>{u.email}</p>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${u.role === 'ADMIN'
                                       ? (isDark ? 'bg-violet-950 text-violet-400 border-violet-800' : 'bg-violet-100 text-violet-700 border-violet-300')
                                       : (isDark ? 'bg-cyan-950 text-cyan-400 border-cyan-800' : 'bg-cyan-100 text-cyan-700 border-cyan-300')
-                                  }`}>{u.role}</span>
-                                </td>
-                                <td className="py-3 px-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                                    u.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
-                                    : u.status === 'BANNED' ? 'bg-rose-950 text-rose-400 border-rose-800'
-                                    : 'bg-amber-950 text-amber-400 border-amber-800'
-                                  }`}>{u.status}</span>
-                                </td>
-                                <td className="py-3 px-2">
-                                  {/* Prevent admins from managing other admins or themselves */}
-                                  {u.role !== 'ADMIN' && u.id !== activeUser.id ? (
-                                    <div className="flex gap-1 justify-end">
-                                      {u.status !== 'ACTIVE' && (
-                                        <button onClick={() => handleUpdateUserStatus(u.id, 'ACTIVE')} className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800 hover:bg-emerald-900 cursor-pointer transition-colors">Activate</button>
-                                      )}
-                                      {u.status !== 'LIMITED' && (
-                                        <button onClick={() => handleUpdateUserStatus(u.id, 'LIMITED')} className="px-2 py-1 rounded text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800 hover:bg-amber-900 cursor-pointer transition-colors">Limit</button>
-                                      )}
-                                      {u.status !== 'BANNED' && (
-                                        <button onClick={() => handleUpdateUserStatus(u.id, 'BANNED')} className="px-2 py-1 rounded text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-800 hover:bg-rose-900 cursor-pointer transition-colors">Ban</button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className={`text-[10px] ${t.textMuted}`}>{u.id === activeUser.id ? '(you)' : '—'}</span>
-                                  )}
-                                </td>
+                                      }`}>{u.role}</span>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${u.status === 'ACTIVE' ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
+                                      : u.status === 'BANNED' ? 'bg-rose-950 text-rose-400 border-rose-800'
+                                        : 'bg-amber-950 text-amber-400 border-amber-800'
+                                      }`}>{u.status}</span>
+                                  </td>
+                                  <td className="py-3 px-2">
+                                    {/* Prevent admins from managing other admins or themselves */}
+                                    {u.role !== 'ADMIN' && u.id !== activeUser.id ? (
+                                      <div className="flex gap-1 justify-end">
+                                        {u.status !== 'ACTIVE' && (
+                                          <button onClick={() => handleUpdateUserStatus(u.id, 'ACTIVE')} className="px-2 py-1 rounded text-[10px] font-bold bg-emerald-950/60 text-emerald-400 border border-emerald-800 hover:bg-emerald-900 cursor-pointer transition-colors">Activate</button>
+                                        )}
+                                        {u.status !== 'LIMITED' && (
+                                          <button onClick={() => handleUpdateUserStatus(u.id, 'LIMITED')} className="px-2 py-1 rounded text-[10px] font-bold bg-amber-950/60 text-amber-400 border border-amber-800 hover:bg-amber-900 cursor-pointer transition-colors">Limit</button>
+                                        )}
+                                        {u.status !== 'BANNED' && (
+                                          <button onClick={() => handleUpdateUserStatus(u.id, 'BANNED')} className="px-2 py-1 rounded text-[10px] font-bold bg-rose-950/60 text-rose-400 border border-rose-800 hover:bg-rose-900 cursor-pointer transition-colors">Ban</button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className={`text-[10px] ${t.textMuted}`}>{u.id === activeUser.id ? '(you)' : '—'}</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    ) : (
+                      /* Global Transactions list */
+                      <div className="overflow-x-auto">
+                        {adminTransactions.length === 0 ? (
+                          <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No transactions found.</div>
+                        ) : (
+                          <table className="w-full text-left text-xs font-mono">
+                            <thead>
+                              <tr className={t.tableHead}>
+                                <th className="py-3 px-2">Payment ID</th>
+                                <th className="py-3 px-2">Sender</th>
+                                <th className="py-3 px-2">Recipient</th>
+                                <th className="py-3 px-2">Amount</th>
+                                <th className="py-3 px-2">Status</th>
+                                <th className="py-3 px-2">Date</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
+                            </thead>
+                            <tbody className={t.tableDivide}>
+                              {adminTransactions.map((p: any) => (
+                                <tr key={p.paymentId} className={t.tableHover}>
+                                  <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId.substring(0, 8)}...</td>
+                                  <td className={`py-3 px-2 ${t.textMuted}`}>{p.senderId}</td>
+                                  <td className={`py-3 px-2 ${t.textMuted}`}>{p.recipientId}</td>
+                                  <td className={`py-3 px-2 font-bold ${t.textSub}`}>{parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency}</td>
+                                  <td className="py-3 px-2">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'
+                                      }`}>{p.status}</span>
+                                  </td>
+                                  <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleString()}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {activeTab === 'form' && (
+                  /* Payment Activity History list */
+                  <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-md font-bold">Payments History</h3>
+                      <button
+                        onClick={() => fetchData(activeUser.id)}
+                        className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`}
+                        title="Sync data"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 6h-2.182" />
+                        </svg>
+                      </button>
                     </div>
-                  ) : (
-                    /* Global Transactions list */
-                    <div className="overflow-x-auto">
-                      {adminTransactions.length === 0 ? (
-                        <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>No transactions found.</div>
-                      ) : (
+
+                    {payments.length === 0 ? (
+                      <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
+                        No payments executed yet. Set up a transfer to start.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
                         <table className="w-full text-left text-xs font-mono">
                           <thead>
                             <tr className={t.tableHead}>
                               <th className="py-3 px-2">Payment ID</th>
-                              <th className="py-3 px-2">Sender</th>
-                              <th className="py-3 px-2">Recipient</th>
+                              <th className="py-3 px-2">From/To</th>
                               <th className="py-3 px-2">Amount</th>
                               <th className="py-3 px-2">Status</th>
                               <th className="py-3 px-2">Date</th>
                             </tr>
                           </thead>
                           <tbody className={t.tableDivide}>
-                            {adminTransactions.map((p: any) => (
+                            {payments.map((p) => (
                               <tr key={p.paymentId} className={t.tableHover}>
-                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId.substring(0,8)}...</td>
-                                <td className={`py-3 px-2 ${t.textMuted}`}>{p.senderId}</td>
-                                <td className={`py-3 px-2 ${t.textMuted}`}>{p.recipientId}</td>
-                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>{parseFloat(p.amount).toLocaleString(undefined, {minimumFractionDigits:2})} {p.currency}</td>
+                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId}</td>
                                 <td className="py-3 px-2">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                    p.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-rose-950 text-rose-400 border border-rose-800'
-                                  }`}>{p.status}</span>
+                                  <span className={p.senderId === activeUser.id ? t.labelMuted : 'text-emerald-400'}>
+                                    {p.senderId === activeUser.id ? 'Outbound' : 'Inbound'}
+                                  </span>{' '}
+                                  <span className={`text-[10px] ${t.textMuted}`}>
+                                    ({p.senderId === activeUser.id ? getUserName(p.recipientId) : getUserName(p.senderId)})
+                                  </span>
                                 </td>
-                                <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleString()}</td>
+                                <td className={`py-3 px-2 font-bold ${t.textSub}`}>
+                                  {p.senderId === activeUser.id ? '-' : '+'}
+                                  {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency}
+                                </td>
+                                <td className="py-3 px-2">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'COMPLETED'
+                                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
+                                    : 'bg-rose-950 text-rose-400 border border-rose-800'
+                                    }`}>
+                                    {p.status}
+                                  </span>
+                                </td>
+                                <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleTimeString()}</td>
                               </tr>
                             ))}
                           </tbody>
                         </table>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'form' && (
-                /* Payment Activity History list */
-                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl ${t.card}`}>
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-md font-bold">Payments History</h3>
-                    <button
-                      onClick={() => fetchData(activeUser.id)}
-                      className={`p-2 border rounded-lg transition-colors shadow-sm ${t.btnRefresh}`}
-                      title="Sync data"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.213 6h-2.182" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  {payments.length === 0 ? (
-                    <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
-                      No payments executed yet. Set up a transfer to start.
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs font-mono">
-                        <thead>
-                          <tr className={t.tableHead}>
-                            <th className="py-3 px-2">Payment ID</th>
-                            <th className="py-3 px-2">From/To</th>
-                            <th className="py-3 px-2">Amount</th>
-                            <th className="py-3 px-2">Status</th>
-                            <th className="py-3 px-2">Date</th>
-                          </tr>
-                        </thead>
-                        <tbody className={t.tableDivide}>
-                          {payments.map((p) => (
-                            <tr key={p.paymentId} className={t.tableHover}>
-                              <td className={`py-3 px-2 font-bold ${t.textSub}`}>{p.paymentId}</td>
-                              <td className="py-3 px-2">
-                                <span className={p.senderId === activeUser.id ? t.labelMuted : 'text-emerald-400'}>
-                                  {p.senderId === activeUser.id ? 'Outbound' : 'Inbound'}
-                                </span>{' '}
-                                <span className={`text-[10px] ${t.textMuted}`}>
-                                  ({p.senderId === activeUser.id ? getUserName(p.recipientId) : getUserName(p.senderId)})
-                                </span>
-                              </td>
-                              <td className={`py-3 px-2 font-bold ${t.textSub}`}>
-                                {p.senderId === activeUser.id ? '-' : '+'}
-                                {parseFloat(p.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })} {p.currency}
-                              </td>
-                              <td className="py-3 px-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${p.status === 'COMPLETED'
-                                    ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                    : 'bg-rose-950 text-rose-400 border border-rose-800'
-                                  }`}>
-                                  {p.status}
-                                </span>
-                              </td>
-                              <td className={`py-3 px-2 ${t.textMuted}`}>{new Date(p.createdAt).toLocaleTimeString()}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {activeTab === 'logs' && activeUser?.role === 'ADMIN' && (
-                /* Cryptographic Log Chain visualizer */
-                <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 ${t.card}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h3 className="text-md font-bold">Immutable Verification Ledger</h3>
-                      <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Logs are cryptographically linked using SHA-256 hash chaining.</p>
-                    </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => runAuditVerification()}
-                        disabled={isVerifying}
-                        className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        {isVerifying ? (
-                          <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                            </svg>
-                            <span>Verify Hash Chain Integrity</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {auditLogs.length === 0 ? (
-                    <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
-                      No logs logged yet. Send a transaction to start the ledger.
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {auditLogs.map((log, index) => {
-                        const isTampered = tamperedLogIndex !== null && log.index === tamperedLogIndex;
-                        return (
-                          <div
-                            key={log.logId || index}
-                            className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${isTampered
-                                ? t.errorBlock
-                                : t.auditBlock
-                              }`}
-                          >
-                            {/* Block Tag */}
-                            <div className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded font-bold border ${t.blockTag}`}>
-                              BLOCK #{log.index !== undefined ? log.index : index}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                              <div className="space-y-1">
-                                <p className={`text-[10px] ${t.textMuted}`}>EVENT TYPE</p>
-                                <p className={`font-bold ${t.textSub}`}>{log.event}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className={`text-[10px] ${t.textMuted}`}>TX REFERENCE</p>
-                                <p className="text-cyan-400 font-semibold">{log.paymentId || 'N/A'}</p>
-                              </div>
-                              <div className="space-y-1">
-                                <p className={`text-[10px] ${t.textMuted}`}>ACTOR ID</p>
-                                <p className={t.textSub}>{log.actor || 'SYSTEM'}</p>
-                              </div>
-                            </div>
-
-                            <div className={`border-t my-3 pt-3 space-y-2 ${t.dividerMid}`}>
-                              <div>
-                                <p className={`text-[9px] font-bold ${t.textMuted}`}>PREVIOUS HASH</p>
-                                <p className={`text-[11px] break-all select-all ${t.labelMuted}`}>{log.prevChecksum}</p>
-                              </div>
-                              <div>
-                                <p className={`text-[9px] font-bold flex items-center gap-1 ${t.textMuted}`}>
-                                  <span>CURRENT BLOCK HASH</span>
-                                  {isTampered && (
-                                    <span className={`text-[9px] font-bold animate-pulse ${t.errorHash}`}>[TAMPERED / BREAK POINT]</span>
-                                  )}
-                                </p>
-                                <p className={`text-[11px] break-all select-all font-bold ${isTampered ? t.errorHash : t.successTitle}`}>
-                                  {log.checksum}
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Verification Chain Link Arrow */}
-                            {index < auditLogs.length - 1 && (
-                              <div className="flex justify-center -mb-8 mt-4 relative z-10">
-                                <div className={`p-1 border rounded-full shadow-md ${t.chainArrow}`}>
-                                  <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
-                                  </svg>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Abuse Case & Security Attack Simulator Deck — USER only */}
-              {/* Normal users can attempt attacks to see the system detect and block them in real time */}
-              {activeUser?.role !== 'ADMIN' && (
-              <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 relative overflow-hidden ${t.card}`}>
-                <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/5 blur-3xl rounded-full"></div>
-
-                <div>
-                  <h3 className="text-md font-bold text-rose-400 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    Abuse Case &amp; Attack Sandbox Deck
-                  </h3>
-                  <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Toggle network/database injection attacks to verify fail-safe filters.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                  {/* Network / MitM Attacks */}
-                  <div className={`space-y-4 p-4 rounded-xl border ${t.subcard}`}>
-                    <h4 className={`text-xs font-mono uppercase tracking-wider font-bold ${t.labelMuted}`}>1. Network Transit Tampering</h4>
-
-                    <div className="space-y-3">
-                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
-                        <input
-                          type="checkbox"
-                          checked={simulateTamper}
-                          onChange={(e) => setSimulateTamper(e.target.checked)}
-                          className="mt-1 accent-cyan-500"
-                        />
-                        <div>
-                          <p className="text-xs font-bold">MITM Payload Tampering</p>
-                          <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Calculates valid signature, then multiplies payment amount by 10 before routing (triggers invalid signature rejection).</p>
-                        </div>
-                      </label>
-
-                      <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
-                        <input
-                          type="checkbox"
-                          checked={simulateBadSignature}
-                          onChange={(e) => setSimulateBadSignature(e.target.checked)}
-                          className="mt-1 accent-cyan-500"
-                        />
-                        <div>
-                          <p className="text-xs font-bold">Force Bad Signature</p>
-                          <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Overrides calculated signature header with a bad mock string (triggers signature matching filter failure).</p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Log Database Tampering */}
-                  <div className={`space-y-4 p-4 rounded-xl border flex flex-col justify-between ${t.subcard}`}>
-                    <div>
-                      <h4 className={`text-xs font-mono uppercase tracking-wider font-bold mb-3 ${t.labelMuted}`}>2. Database Log Corruption</h4>
-                      <div className="grid grid-cols-2 gap-2 mb-3">
-                        <div>
-                          <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>LOG INDEX</label>
-                          <input
-                            type="number"
-                            value={tamperIndexInput}
-                            onChange={(e) => setTamperIndexInput(e.target.value)}
-                            className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
-                          />
-                        </div>
-                        <div>
-                          <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>NEW AMOUNT</label>
-                          <input
-                            type="text"
-                            value={tamperAmountInput}
-                            onChange={(e) => setTamperAmountInput(e.target.value)}
-                            className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
-                          />
-                        </div>
                       </div>
-                      <p className={`text-[10px] ${t.textMuted}`}>Directly modifies a saved log entry in the NestJS in-memory array. Recalculating audit hashes will immediately flag the index.</p>
-                    </div>
-
-                    <div className="pt-2">
-                      <button
-                        type="button"
-                        onClick={triggerLogTampering}
-                        disabled={isTampering}
-                        className="w-full bg-rose-950 hover:bg-rose-900 text-rose-300 font-bold border border-rose-800 py-2 px-3 rounded-lg text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                      >
-                        {isTampering ? (
-                          <span className="w-3.5 h-3.5 border-2 border-rose-300 border-t-transparent rounded-full animate-spin"></span>
-                        ) : (
-                          <>
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3h-4a3 3 0 00-3-3H9z" />
-                            </svg>
-                            <span>Corrupt Database Record</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Abuse result alert */}
-                {tamperResult && (
-                  <div className="bg-[#1c1218] border border-rose-950 text-rose-300 rounded-xl p-3 text-xs font-mono flex gap-2 items-center">
-                    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{tamperResult}</span>
+                    )}
                   </div>
                 )}
-              </div>
-              )}
-            </>)}
+
+                {activeTab === 'logs' && activeUser?.role === 'ADMIN' && (
+                  /* Cryptographic Log Chain visualizer */
+                  <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 ${t.card}`}>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <h3 className="text-md font-bold">Immutable Verification Ledger</h3>
+                        <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Logs are cryptographically linked using SHA-256 hash chaining.</p>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => runAuditVerification()}
+                          disabled={isVerifying}
+                          className="bg-cyan-500 hover:bg-cyan-400 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                        >
+                          {isVerifying ? (
+                            <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                          ) : (
+                            <>
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              <span>Verify Hash Chain Integrity</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {auditLogs.length === 0 ? (
+                      <div className={`text-center py-12 font-mono text-sm rounded-xl ${t.emptyState}`}>
+                        No logs logged yet. Send a transaction to start the ledger.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {auditLogs.map((log, index) => {
+                          const isTampered = tamperedLogIndex !== null && log.index === tamperedLogIndex;
+                          return (
+                            <div
+                              key={log.logId || index}
+                              className={`p-4 rounded-xl border font-mono text-xs transition-all relative ${isTampered
+                                ? t.errorBlock
+                                : t.auditBlock
+                                }`}
+                            >
+                              {/* Block Tag */}
+                              <div className={`absolute top-3 right-3 text-[10px] px-2 py-0.5 rounded font-bold border ${t.blockTag}`}>
+                                BLOCK #{log.index !== undefined ? log.index : index}
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                <div className="space-y-1">
+                                  <p className={`text-[10px] ${t.textMuted}`}>EVENT TYPE</p>
+                                  <p className={`font-bold ${t.textSub}`}>{log.event}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className={`text-[10px] ${t.textMuted}`}>TX REFERENCE</p>
+                                  <p className="text-cyan-400 font-semibold">{log.paymentId || 'N/A'}</p>
+                                </div>
+                                <div className="space-y-1">
+                                  <p className={`text-[10px] ${t.textMuted}`}>ACTOR ID</p>
+                                  <p className={t.textSub}>{log.actor || 'SYSTEM'}</p>
+                                </div>
+                              </div>
+
+                              <div className={`border-t my-3 pt-3 space-y-2 ${t.dividerMid}`}>
+                                <div>
+                                  <p className={`text-[9px] font-bold ${t.textMuted}`}>PREVIOUS HASH</p>
+                                  <p className={`text-[11px] break-all select-all ${t.labelMuted}`}>{log.prevChecksum}</p>
+                                </div>
+                                <div>
+                                  <p className={`text-[9px] font-bold flex items-center gap-1 ${t.textMuted}`}>
+                                    <span>CURRENT BLOCK HASH</span>
+                                    {isTampered && (
+                                      <span className={`text-[9px] font-bold animate-pulse ${t.errorHash}`}>[TAMPERED / BREAK POINT]</span>
+                                    )}
+                                  </p>
+                                  <p className={`text-[11px] break-all select-all font-bold ${isTampered ? t.errorHash : t.successTitle}`}>
+                                    {log.checksum}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Verification Chain Link Arrow */}
+                              {index < auditLogs.length - 1 && (
+                                <div className="flex justify-center -mb-8 mt-4 relative z-10">
+                                  <div className={`p-1 border rounded-full shadow-md ${t.chainArrow}`}>
+                                    <svg className="w-4 h-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 13l-7 7-7-7m14-6l-7 7-7-7" />
+                                    </svg>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Abuse Case & Security Attack Simulator Deck — USER only */}
+                {/* Normal users can attempt attacks to see the system detect and block them in real time */}
+                {activeUser?.role !== 'ADMIN' && (
+                  <div className={`border rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-xl space-y-4 sm:space-y-6 relative overflow-hidden ${t.card}`}>
+                    <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/5 blur-3xl rounded-full"></div>
+
+                    <div>
+                      <h3 className="text-md font-bold text-rose-400 flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Abuse Case &amp; Attack Sandbox Deck
+                      </h3>
+                      <p className={`text-xs mt-0.5 ${t.labelMuted}`}>Toggle network/database injection attacks to verify fail-safe filters.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                      {/* Network / MitM Attacks */}
+                      <div className={`space-y-4 p-4 rounded-xl border ${t.subcard}`}>
+                        <h4 className={`text-xs font-mono uppercase tracking-wider font-bold ${t.labelMuted}`}>1. Network Transit Tampering</h4>
+
+                        <div className="space-y-3">
+                          <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
+                            <input
+                              type="checkbox"
+                              checked={simulateTamper}
+                              onChange={(e) => setSimulateTamper(e.target.checked)}
+                              className="mt-1 accent-cyan-500"
+                            />
+                            <div>
+                              <p className="text-xs font-bold">MITM Payload Tampering</p>
+                              <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Calculates valid signature, then multiplies payment amount by 10 before routing (triggers invalid signature rejection).</p>
+                            </div>
+                          </label>
+
+                          <label className={`flex items-start gap-3 p-3 border rounded-lg cursor-pointer transition-all ${t.subcardItem}`}>
+                            <input
+                              type="checkbox"
+                              checked={simulateBadSignature}
+                              onChange={(e) => setSimulateBadSignature(e.target.checked)}
+                              className="mt-1 accent-cyan-500"
+                            />
+                            <div>
+                              <p className="text-xs font-bold">Force Bad Signature</p>
+                              <p className={`text-[10px] mt-0.5 ${t.textMuted}`}>Overrides calculated signature header with a bad mock string (triggers signature matching filter failure).</p>
+                            </div>
+                          </label>
+                        </div>
+                      </div>
+
+                      {/* Log Database Tampering */}
+                      <div className={`space-y-4 p-4 rounded-xl border flex flex-col justify-between ${t.subcard}`}>
+                        <div>
+                          <h4 className={`text-xs font-mono uppercase tracking-wider font-bold mb-3 ${t.labelMuted}`}>2. Database Log Corruption</h4>
+                          <div className="grid grid-cols-2 gap-2 mb-3">
+                            <div>
+                              <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>LOG INDEX</label>
+                              <input
+                                type="number"
+                                value={tamperIndexInput}
+                                onChange={(e) => setTamperIndexInput(e.target.value)}
+                                className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
+                              />
+                            </div>
+                            <div>
+                              <label className={`block text-[9px] font-mono mb-1 ${t.textMuted}`}>NEW AMOUNT</label>
+                              <input
+                                type="text"
+                                value={tamperAmountInput}
+                                onChange={(e) => setTamperAmountInput(e.target.value)}
+                                className={`w-full border rounded px-2.5 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-rose-500 ${t.inputTamper}`}
+                              />
+                            </div>
+                          </div>
+                          <p className={`text-[10px] ${t.textMuted}`}>Directly modifies a saved log entry in the NestJS in-memory array. Recalculating audit hashes will immediately flag the index.</p>
+                        </div>
+
+                        <div className="pt-2">
+                          <button
+                            type="button"
+                            onClick={triggerLogTampering}
+                            disabled={isTampering}
+                            className="w-full bg-rose-950 hover:bg-rose-900 text-rose-300 font-bold border border-rose-800 py-2 px-3 rounded-lg text-xs transition-all flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          >
+                            {isTampering ? (
+                              <span className="w-3.5 h-3.5 border-2 border-rose-300 border-t-transparent rounded-full animate-spin"></span>
+                            ) : (
+                              <>
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v1a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3h-4a3 3 0 00-3-3H9z" />
+                                </svg>
+                                <span>Corrupt Database Record</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Abuse result alert */}
+                    {tamperResult && (
+                      <div className="bg-[#1c1218] border border-rose-950 text-rose-300 rounded-xl p-3 text-xs font-mono flex gap-2 items-center">
+                        <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>{tamperResult}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>)}
             </div>
           </div>
         )}
@@ -1919,11 +1916,10 @@ export default function Dashboard() {
                       const el = document.getElementById(`verification-code-input-${focusIdx}`);
                       el?.focus();
                     }}
-                    className={`w-11 h-13 text-center text-xl font-mono font-bold border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all ${
-                      isDark
-                        ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
-                        : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
+                    className={`w-11 h-13 text-center text-xl font-mono font-bold border-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-all ${isDark
+                      ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                      }`}
                     autoFocus={i === 0}
                   />
                 ))}
@@ -1932,13 +1928,12 @@ export default function Dashboard() {
 
             {/* Remaining Attempts */}
             <div className="text-center mb-4">
-              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono ${
-                remainingAttempts <= 1
-                  ? 'bg-rose-950/30 border border-rose-800 text-rose-400'
-                  : isDark
-                    ? 'bg-zinc-800 border border-zinc-700 text-zinc-400'
-                    : 'bg-slate-100 border border-slate-200 text-slate-500'
-              }`}>
+              <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono ${remainingAttempts <= 1
+                ? 'bg-rose-950/30 border border-rose-800 text-rose-400'
+                : isDark
+                  ? 'bg-zinc-800 border border-zinc-700 text-zinc-400'
+                  : 'bg-slate-100 border border-slate-200 text-slate-500'
+                }`}>
                 <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
@@ -1985,11 +1980,10 @@ export default function Dashboard() {
                 <button
                   onClick={handleResendCode}
                   disabled={isResendingCode || resendCooldown > 0}
-                  className={`flex-1 py-2.5 px-3 border rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${
-                    isDark
-                      ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300'
-                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600'
-                  }`}
+                  className={`flex-1 py-2.5 px-3 border rounded-xl text-xs font-bold transition-all flex justify-center items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${isDark
+                    ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-300'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600'
+                    }`}
                 >
                   {isResendingCode ? (
                     <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></span>
@@ -2013,11 +2007,10 @@ export default function Dashboard() {
                     setVerificationSuccess(null);
                   }}
                   disabled={isTransferring}
-                  className={`py-2.5 px-4 border rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 ${
-                    isDark
-                      ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'
-                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-500'
-                  }`}
+                  className={`py-2.5 px-4 border rounded-xl text-xs font-bold transition-all cursor-pointer disabled:opacity-50 ${isDark
+                    ? 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700 text-zinc-400'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-500'
+                    }`}
                 >
                   Cancel
                 </button>

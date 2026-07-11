@@ -37,7 +37,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     // specific mappings based on requirements
     if (status === 401 && message === 'Unauthorized') {
-        code = 'INVALID_CREDENTIALS';
+      code = 'INVALID_CREDENTIALS';
     }
 
     response.status(status).json({

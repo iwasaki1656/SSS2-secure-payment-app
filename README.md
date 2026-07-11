@@ -113,3 +113,148 @@ For testing purposes, the system seeds the following users on startup:
 | 🛡️ **Admin**| Admin | `admin@securefin.com` | `Admin@SecureFin2026!` |
 
 *(Note: The Admin account can log in by clicking the "Admin Portal" toggle on the frontend login page).*
+
+
+## File Structure
+. (SSS)
+├── backend
+│   ├── src
+│   │   ├── admin
+│   │   │   ├── admin.controller.ts
+│   │   │   ├── admin.module.ts
+│   │   │   └── admin.service.ts
+│   │   ├── audit
+│   │   │   ├── audit.controller.spec.ts
+│   │   │   ├── audit.controller.ts
+│   │   │   ├── audit.module.ts
+│   │   │   ├── audit.service.spec.ts
+│   │   │   └── audit.service.ts
+│   │   ├── auth
+│   │   │   ├── dto
+│   │   │   │   ├── login.dto.ts
+│   │   │   │   ├── signup.dto.ts
+│   │   │   │   └── update-profile.dto.ts
+│   │   │   ├── guards
+│   │   │   │   ├── jwt-auth.guard.ts
+│   │   │   │   ├── roles.decorator.ts
+│   │   │   │   └── roles.guard.ts
+│   │   │   ├── auth.controller.spec.ts
+│   │   │   ├── auth.controller.ts
+│   │   │   ├── auth.module.ts
+│   │   │   ├── auth.service.spec.ts
+│   │   │   └── auth.service.ts
+│   │   ├── common
+│   │   │   ├── filters
+│   │   │   │   └── all-exceptions.filter.ts
+│   │   │   └── interceptors
+│   │   │       └── transform.interceptor.ts
+│   │   ├── database
+│   │   │   ├── database.module.ts
+│   │   │   ├── database.service.spec.ts
+│   │   │   ├── database.service.ts
+│   │   │   └── models.ts
+│   │   ├── email
+│   │   │   ├── email.module.ts
+│   │   │   └── email.service.ts
+│   │   ├── payments
+│   │   │   ├── dto
+│   │   │   │   ├── request-code.dto.ts
+│   │   │   │   ├── resend-code.dto.ts
+│   │   │   │   └── transfer.dto.ts
+│   │   │   ├── guards
+│   │   │   │   ├── idempotency.guard.ts
+│   │   │   │   └── signature.guard.ts
+│   │   │   ├── payments.controller.spec.ts
+│   │   │   ├── payments.controller.ts
+│   │   │   ├── payments.module.ts
+│   │   │   ├── payments.service.spec.ts
+│   │   │   └── payments.service.ts
+│   │   ├── utils
+│   │   │   └── masking.util.ts
+│   │   ├── app.controller.spec.ts
+│   │   ├── app.controller.ts
+│   │   ├── app.module.ts
+│   │   ├── app.service.ts
+│   │   └── main.ts
+│   ├── test
+│   │   ├── app.e2e-spec.ts
+│   │   └── jest-e2e.json
+│   ├── .env
+│   ├── .env.example
+│   ├── .prettierrc
+│   ├── eslint.config.mjs
+│   ├── nest-cli.json
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── README.md
+│   ├── tsconfig.build.json
+│   └── tsconfig.json
+├── frontend
+│   ├── app
+│   │   ├── api
+│   │   │   └── v1
+│   │   │       ├── admin
+│   │   │       │   ├── transactions
+│   │   │       │   │   └── route.ts
+│   │   │       │   └── users
+│   │   │       │       ├── [id]
+│   │   │       │       │   └── status
+│   │   │       │       │       └── route.ts
+│   │   │       │       └── route.ts
+│   │   │       ├── audit
+│   │   │       │   ├── logs
+│   │   │       │   │   └── route.ts
+│   │   │       │   ├── tamper
+│   │   │       │   │   └── route.ts
+│   │   │       │   └── verify
+│   │   │       │       └── route.ts
+│   │   │       ├── auth
+│   │   │       │   ├── admin-login
+│   │   │       │   │   └── route.ts
+│   │   │       │   ├── login
+│   │   │       │   │   └── route.ts
+│   │   │       │   ├── logout
+│   │   │       │   │   └── route.ts
+│   │   │       │   ├── profile
+│   │   │       │   │   └── route.ts
+│   │   │       │   └── signup
+│   │   │       │       └── route.ts
+│   │   │       └── payments
+│   │   │           ├── transfer
+│   │   │           │   ├── request-code
+│   │   │           │   │   └── route.ts
+│   │   │           │   ├── resend-code
+│   │   │           │   │   └── route.ts
+│   │   │           │   └── route.ts
+│   │   │           └── route.ts
+│   │   ├── utils
+│   │   │   └── crypto.ts
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   └── page.tsx
+│   ├── public
+│   │   ├── file.svg
+│   │   ├── globe.svg
+│   │   ├── next.svg
+│   │   ├── vercel.svg
+│   │   └── window.svg
+│   ├── .env
+│   ├── .env.example
+│   ├── AGENTS.md
+│   ├── CLAUDE.md
+│   ├── eslint.config.mjs
+│   ├── next-env.d.ts
+│   ├── next.config.ts
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.mjs
+│   ├── README.md
+│   ├── tsconfig.json
+│   └── tsconfig.tsbuildinfo
+├── .gitignore
+├── .node-version
+├── package.json
+├── README.md
+├── scratch.js
+└── test_request.js

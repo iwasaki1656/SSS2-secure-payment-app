@@ -80,10 +80,15 @@ export class AuditService {
   }
 
   // Simulates a database attack by mutating a log entry without updating the hash chain
-  tamperLog(index: number, amount: string): { tampered: boolean; index: number } {
+  tamperLog(
+    index: number,
+    amount: string,
+  ): { tampered: boolean; index: number } {
     const logs = this.db.auditLogs;
     if (index < 0 || index >= logs.length) {
-      throw new Error(`Log index ${index} is out of range (0–${logs.length - 1})`);
+      throw new Error(
+        `Log index ${index} is out of range (0–${logs.length - 1})`,
+      );
     }
     // Silently mutate the log entry — hash chain will now be broken at this index
     logs[index] = {
@@ -93,4 +98,3 @@ export class AuditService {
     return { tampered: true, index };
   }
 }
-

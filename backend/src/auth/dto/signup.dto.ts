@@ -1,13 +1,41 @@
-import { IsEmail, IsNotEmpty, IsString, MinLength, Matches, IsOptional } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Matches,
+  IsOptional,
+} from 'class-validator';
 
 // Blocklist of common fake/disposable email domains
 const BLOCKED_DOMAINS = [
-  'mailinator.com', 'guerrillamail.com', 'tempmail.com', 'throwam.com',
-  'yopmail.com', 'sharklasers.com', 'guerrillamailblock.com', 'grr.la',
-  'guerrillamail.info', 'guerrillamail.biz', 'guerrillamail.de', 'guerrillamail.net',
-  'guerrillamail.org', 'spam4.me', 'trashmail.com', 'dispostable.com', 'fakeinbox.com',
-  'mailnull.com', 'spamgourmet.com', 'trashmail.at', 'trashmail.io', 'trashmail.me',
-  'maildrop.cc', 'discard.email', 'spambox.us', 'throwam.com', 'mintemail.com',
+  'mailinator.com',
+  'guerrillamail.com',
+  'tempmail.com',
+  'throwam.com',
+  'yopmail.com',
+  'sharklasers.com',
+  'guerrillamailblock.com',
+  'grr.la',
+  'guerrillamail.info',
+  'guerrillamail.biz',
+  'guerrillamail.de',
+  'guerrillamail.net',
+  'guerrillamail.org',
+  'spam4.me',
+  'trashmail.com',
+  'dispostable.com',
+  'fakeinbox.com',
+  'mailnull.com',
+  'spamgourmet.com',
+  'trashmail.at',
+  'trashmail.io',
+  'trashmail.me',
+  'maildrop.cc',
+  'discard.email',
+  'spambox.us',
+  'throwam.com',
+  'mintemail.com',
 ];
 
 export function isBlockedEmailDomain(email: string): boolean {
@@ -23,7 +51,9 @@ export class SignupDto {
   @IsString()
   @IsNotEmpty()
   @MinLength(3, { message: 'Username must be at least 3 characters.' })
-  @Matches(/^[a-zA-Z0-9_]+$/, { message: 'Username can only contain letters, numbers, and underscores.' })
+  @Matches(/^[a-zA-Z0-9_]+$/, {
+    message: 'Username can only contain letters, numbers, and underscores.',
+  })
   username!: string;
 
   @IsString()

@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsNumber, Min, Matches } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsNumber,
+  Min,
+  Matches,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class TransferDto {
@@ -17,7 +24,9 @@ export class TransferDto {
 
   @IsString()
   @IsNotEmpty()
-  @Matches(/^[A-Z]{3}$/, { message: 'Currency must follow ISO 4217 (e.g., USD)' })
+  @Matches(/^[A-Z]{3}$/, {
+    message: 'Currency must follow ISO 4217 (e.g., USD)',
+  })
   currency!: string;
 
   @IsOptional()

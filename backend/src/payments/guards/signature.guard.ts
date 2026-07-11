@@ -30,11 +30,16 @@ export class SignatureGuard implements CanActivate {
     const signature = request.headers['x-signature'];
 
     if (!signature) {
-      throw new BadRequestException({ code: 'INVALID_SIGNATURE', message: 'Missing signature' });
+      throw new BadRequestException({
+        code: 'INVALID_SIGNATURE',
+        message: 'Missing signature',
+      });
     }
 
     // Security: signing secret loaded from environment, never hardcoded
-    const secret = this.configService.get<string>('PAYMENT_SIGNING_SECRET') || 'proto_payment_secret_2026_super_secure';
+    const secret =
+      this.configService.get<string>('PAYMENT_SIGNING_SECRET') ||
+      'proto_payment_secret_2026_super_secure';
     // Sort keys to match frontend calculateHmac deterministic serialization
     const sortedBody = sortObjectKeys(request.body);
     const payload = JSON.stringify(sortedBody);
@@ -46,11 +51,10 @@ export class SignatureGuard implements CanActivate {
     if (signature !== expectedSignature) {
       throw new BadRequestException({
         code: 'INVALID_SIGNATURE',
-        message: `Invalid signature. Expected: ${expectedSignature}, Received: ${signature}. Payload: ${payload}. Secret: ${secret}`
+        message: `Invalid signature. Expected: ${expectedSignature}, Received: ${signature}. Payload: ${payload}. Secret: ${secret}`,
       });
     }
 
     return true;
   }
 }
-

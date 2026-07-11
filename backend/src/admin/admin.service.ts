@@ -16,12 +16,18 @@ export class AdminService {
   updateUserStatus(userId: string, status: 'ACTIVE' | 'BANNED' | 'LIMITED') {
     const user = this.db.users.get(userId);
     if (!user) {
-      throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'User not found.' });
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
     }
 
     const updated = this.db.updateUserStatus(userId, status);
     if (!updated) {
-      throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'User not found.' });
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
     }
 
     const { password, ...userWithoutPassword } = updated;

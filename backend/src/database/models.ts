@@ -1,6 +1,6 @@
 export interface User {
   id: string;
-  email: string;         // Decrypted in-memory representation
+  email: string; // Decrypted in-memory representation
   emailEncrypted: string; // AES-256-GCM encrypted — what is persisted at rest
   username: string;
   password: string; // Stored as bcrypt hash — never plaintext

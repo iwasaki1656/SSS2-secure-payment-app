@@ -17,12 +17,18 @@ export class IdempotencyGuard implements CanActivate {
     const idempotencyKey = request.headers['x-idempotency-key'] as string;
 
     if (!idempotencyKey) {
-      throw new BadRequestException({ code: 'MISSING_IDEMPOTENCY_KEY', message: 'X-Idempotency-Key header is required' });
+      throw new BadRequestException({
+        code: 'MISSING_IDEMPOTENCY_KEY',
+        message: 'X-Idempotency-Key header is required',
+      });
     }
 
     for (const payment of this.db.payments.values()) {
       if (payment.idempotencyKey === idempotencyKey) {
-        throw new ConflictException({ code: 'DUPLICATE_REQUEST', message: 'Duplicate request detected' });
+        throw new ConflictException({
+          code: 'DUPLICATE_REQUEST',
+          message: 'Duplicate request detected',
+        });
       }
     }
 

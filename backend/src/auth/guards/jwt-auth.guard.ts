@@ -31,7 +31,9 @@ export class JwtAuthGuard implements CanActivate {
 
       // Security: JWT Blocklist check — reject tokens that have been explicitly revoked via logout
       if (payload.jti && this.authService.isTokenBlocked(payload.jti)) {
-        throw new UnauthorizedException('Session has been invalidated. Please log in again.');
+        throw new UnauthorizedException(
+          'Session has been invalidated. Please log in again.',
+        );
       }
 
       (request as any).user = payload;
@@ -46,4 +48,3 @@ export class JwtAuthGuard implements CanActivate {
     return type === 'Bearer' ? token : undefined;
   }
 }
-

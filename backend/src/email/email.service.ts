@@ -9,13 +9,15 @@ export class EmailService {
   constructor(private readonly configService: ConfigService) {
     // Security: Gmail SMTP credentials loaded from environment variables
     // To configure: set GMAIL_USER and GMAIL_APP_PASSWORD in backend/.env
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: this.configService.get<string>('GMAIL_USER'),
-        pass: this.configService.get<string>('GMAIL_APP_PASSWORD'),
-      },
-    });
+    const user = this.configService.get<string>('GMAIL_USER');
+    const pass = this.configService.get<string>('GMAIL_APP_PASSWORD');
+    
+    if (user && pass) {
+      this.transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user, pass },
+      });
+    }
   }
 
   /**
@@ -23,6 +25,13 @@ export class EmailService {
    * Used for two-factor authentication during fund transfers.
    */
   async sendVerificationCode(to: string, code: string): Promise<void> {
+    // [DEV MODE] Print the 2FA code to the terminal for easy local testing
+    console.log(`\n\n========================================`);
+    console.log(`[DEV MODE] 2FA Verification Code for ${to}: ${code}`);
+    console.log(`========================================\n\n`);
+
+    if (!this.transporter) return;
+
     const from = this.configService.get<string>('GMAIL_USER');
 
     await this.transporter.sendMail({
@@ -69,6 +78,7 @@ export class EmailService {
     currency: string,
     description: string,
   ): Promise<void> {
+    if (!this.transporter) return;
     const from = this.configService.get<string>('GMAIL_USER');
 
     await this.transporter.sendMail({
@@ -91,12 +101,16 @@ export class EmailService {
                 <td style="color: #a1a1aa; padding: 8px 0; border-bottom: 1px solid #334155;">Amount</td>
                 <td style="color: #34d399; padding: 8px 0; border-bottom: 1px solid #334155; text-align: right; font-weight: bold; font-size: 18px;">+${parseFloat(amount).toLocaleString()} ${currency}</td>
               </tr>
-              ${description ? `
+              ${
+                description
+                  ? `
               <tr>
                 <td style="color: #a1a1aa; padding: 8px 0;">Description</td>
                 <td style="color: #e4e4e7; padding: 8px 0; text-align: right;">${description}</td>
               </tr>
-              ` : ''}
+              `
+                  : ''
+              }
             </table>
           </div>
           <div style="background: #0f2a1d; border-radius: 8px; padding: 16px; border-left: 3px solid #34d399; margin-bottom: 16px;">
@@ -119,4 +133,3 @@ export class EmailService {
     });
   }
 }
-

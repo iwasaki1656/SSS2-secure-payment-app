@@ -1,4 +1,13 @@
-import { Controller, Post, Put, Body, HttpCode, HttpStatus, Request, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Put,
+  Body,
+  HttpCode,
+  HttpStatus,
+  Request,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { SignupDto } from './dto/signup.dto';
@@ -30,7 +39,10 @@ export class AuthController {
   @Put('profile')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
-  updateProfile(@Request() req: any, @Body() updateProfileDto: UpdateProfileDto) {
+  updateProfile(
+    @Request() req: any,
+    @Body() updateProfileDto: UpdateProfileDto,
+  ) {
     // Security: User ID is extracted from the verified JWT payload, not from the request body
     return this.authService.updateProfile(req.user.sub, updateProfileDto);
   }

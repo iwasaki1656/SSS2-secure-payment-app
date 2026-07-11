@@ -16,7 +16,10 @@ const ENCRYPTION_KEY = Buffer.from(
 function encrypt(plaintext: string): string {
   const iv = randomBytes(12); // 96-bit IV recommended for GCM
   const cipher = createCipheriv('aes-256-gcm', ENCRYPTION_KEY, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+  const encrypted = Buffer.concat([
+    cipher.update(plaintext, 'utf8'),
+    cipher.final(),
+  ]);
   const authTag = cipher.getAuthTag();
   return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
 }
@@ -31,7 +34,6 @@ function decrypt(ciphertext: string): string {
   decipher.setAuthTag(authTag);
   return decipher.update(encrypted).toString('utf8') + decipher.final('utf8');
 }
-
 
 @Injectable()
 export class DatabaseService implements OnModuleInit {
@@ -86,8 +88,12 @@ export class DatabaseService implements OnModuleInit {
   }
 
   /** Publicly expose encrypt/decrypt so auth.service can use them */
-  encrypt(plaintext: string): string { return encrypt(plaintext); }
-  decrypt(ciphertext: string): string { return decrypt(ciphertext); }
+  encrypt(plaintext: string): string {
+    return encrypt(plaintext);
+  }
+  decrypt(ciphertext: string): string {
+    return decrypt(ciphertext);
+  }
 
   getUserByEmail(email: string): User | undefined {
     for (const user of this.users.values()) {
@@ -108,10 +114,17 @@ export class DatabaseService implements OnModuleInit {
     // Try direct ID lookup first (most common)
     if (this.users.has(identifier)) return this.users.get(identifier);
     // Then try email and username
-    return this.getUserByEmail(identifier) || this.getUserByUsername(identifier);
+    return (
+      this.getUserByEmail(identifier) || this.getUserByUsername(identifier)
+    );
   }
 
-  createUser(email: string, username: string, hashedPassword: string, hashedPin?: string): User {
+  createUser(
+    email: string,
+    username: string,
+    hashedPassword: string,
+    hashedPin?: string,
+  ): User {
     const id = uuidv4();
     const newUser: User = {
       id,
@@ -129,11 +142,20 @@ export class DatabaseService implements OnModuleInit {
     return newUser;
   }
 
-  updateUser(id: string, updates: Partial<Pick<User, 'email' | 'username' | 'password' | 'profilePicture' | 'transactionPin'>>): User | undefined {
+  updateUser(
+    id: string,
+    updates: Partial<
+      Pick<
+        User,
+        'email' | 'username' | 'password' | 'profilePicture' | 'transactionPin'
+      >
+    >,
+  ): User | undefined {
     const user = this.users.get(id);
     if (!user) return undefined;
     // If email is being updated, re-encrypt it
-    if (updates.email) updates = { ...updates, emailEncrypted: encrypt(updates.email) } as any;
+    if (updates.email)
+      updates = { ...updates, emailEncrypted: encrypt(updates.email) } as any;
     Object.assign(user, updates);
     return user;
   }
@@ -144,7 +166,10 @@ export class DatabaseService implements OnModuleInit {
   }
 
   /** Admin: Update a user's status (ACTIVE / BANNED / LIMITED) */
-  updateUserStatus(userId: string, status: 'ACTIVE' | 'BANNED' | 'LIMITED'): User | undefined {
+  updateUserStatus(
+    userId: string,
+    status: 'ACTIVE' | 'BANNED' | 'LIMITED',
+  ): User | undefined {
     const user = this.users.get(userId);
     if (!user) return undefined;
     user.status = status;
@@ -154,7 +179,8 @@ export class DatabaseService implements OnModuleInit {
   /** Admin: Get all payments across all users */
   getAllTransactions(): Payment[] {
     return Array.from(this.payments.values()).sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   }
 }

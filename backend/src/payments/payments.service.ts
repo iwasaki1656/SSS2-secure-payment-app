@@ -1,4 +1,11 @@
-import { Injectable, NotFoundException, UnprocessableEntityException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  UnprocessableEntityException,
+  ForbiddenException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { maskSensitiveData } from '../utils/masking.util';
 import { AuditService } from '../audit/audit.service';
@@ -10,13 +17,13 @@ import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 
 // ─── Fraud Detection Limits ───────────────────────────────────────────────────
-const SINGLE_TX_LIMIT = 20000;    // Max amount per single transaction
-const DAILY_LIMIT = 50000;        // Max total transferred in a 24-hour window
+const SINGLE_TX_LIMIT = 20000; // Max amount per single transaction
+const DAILY_LIMIT = 50000; // Max total transferred in a 24-hour window
 
 // ─── 2FA Verification Constants ───────────────────────────────────────────────
-const VERIFICATION_CODE_LENGTH = 6;       // 6-digit numeric code
-const VERIFICATION_EXPIRY_MS = 5 * 60 * 1000;  // 5 minutes
-const MAX_VERIFICATION_ATTEMPTS = 3;      // Max wrong code attempts
+const VERIFICATION_CODE_LENGTH = 6; // 6-digit numeric code
+const VERIFICATION_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_VERIFICATION_ATTEMPTS = 3; // Max wrong code attempts
 
 /** In-memory store for pending 2FA verification sessions */
 interface VerificationSession {
@@ -24,15 +31,18 @@ interface VerificationSession {
   senderId: string;
   senderEmail: string;
   attempts: number;
-  expiresAt: number;  // Unix timestamp in ms
+  expiresAt: number; // Unix timestamp in ms
 }
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  
+
   // Security: In-memory map of pending 2FA verification sessions
-  private readonly verificationSessions = new Map<string, VerificationSession>();
+  private readonly verificationSessions = new Map<
+    string,
+    VerificationSession
+  >();
 
   constructor(
     private readonly db: DatabaseService,
@@ -44,14 +54,22 @@ export class PaymentsService {
    * Security: Generate a 6-digit verification code and send it to the sender's email.
    * Returns a verificationId to correlate the code entry with this session.
    */
-  async requestVerificationCode(senderId: string): Promise<{ verificationId: string }> {
+  async requestVerificationCode(
+    senderId: string,
+  ): Promise<{ verificationId: string }> {
     const sender = this.db.users.get(senderId);
     if (!sender) {
-      throw new NotFoundException({ code: 'SENDER_NOT_FOUND', message: 'Sender not found' });
+      throw new NotFoundException({
+        code: 'SENDER_NOT_FOUND',
+        message: 'Sender not found',
+      });
     }
 
     if (sender.status === 'LIMITED') {
-      throw new UnprocessableEntityException({ code: 'ACCOUNT_LIMITED', message: 'Your account is currently limited.' });
+      throw new UnprocessableEntityException({
+        code: 'ACCOUNT_LIMITED',
+        message: 'Your account is currently limited.',
+      });
     }
 
     // Generate cryptographically secure 6-digit code
@@ -77,16 +95,26 @@ export class PaymentsService {
    * Security: Resend a new verification code for an existing session.
    * The old code is invalidated and a new one is generated.
    */
-  async resendVerificationCode(verificationId: string): Promise<{ verificationId: string }> {
+  async resendVerificationCode(
+    verificationId: string,
+  ): Promise<{ verificationId: string }> {
     const session = this.verificationSessions.get(verificationId);
     if (!session) {
-      throw new BadRequestException({ code: 'SESSION_NOT_FOUND', message: 'Verification session not found or expired. Please request a new code.' });
+      throw new BadRequestException({
+        code: 'SESSION_NOT_FOUND',
+        message:
+          'Verification session not found or expired. Please request a new code.',
+      });
     }
 
     // Check if already exceeded max attempts
     if (session.attempts >= MAX_VERIFICATION_ATTEMPTS) {
       this.verificationSessions.delete(verificationId);
-      throw new ForbiddenException({ code: 'MAX_ATTEMPTS_EXCEEDED', message: 'Maximum verification attempts exceeded. Please start a new transfer.' });
+      throw new ForbiddenException({
+        code: 'MAX_ATTEMPTS_EXCEEDED',
+        message:
+          'Maximum verification attempts exceeded. Please start a new transfer.',
+      });
     }
 
     // Generate a new code (invalidates the old one)
@@ -105,7 +133,10 @@ export class PaymentsService {
     const amount = dto.amount;
     // Amount is already validated by TransferDto as > 0, but we can keep a secondary check
     if (isNaN(amount) || amount <= 0) {
-      throw new UnprocessableEntityException({ code: 'INVALID_AMOUNT', message: 'Amount must be > 0' });
+      throw new UnprocessableEntityException({
+        code: 'INVALID_AMOUNT',
+        message: 'Amount must be > 0',
+      });
     }
 
     // ─── Security: 2FA Email Verification ──────────────────────────────────
@@ -114,33 +145,57 @@ export class PaymentsService {
     // Resolve sender by ID
     const sender = this.db.users.get(dto.senderId);
     if (!sender) {
-      throw new NotFoundException({ code: 'SENDER_NOT_FOUND', message: 'Sender not found' });
+      throw new NotFoundException({
+        code: 'SENDER_NOT_FOUND',
+        message: 'Sender not found',
+      });
     }
 
     if (sender.status === 'LIMITED') {
-      throw new UnprocessableEntityException({ code: 'ACCOUNT_LIMITED', message: 'Your account is currently limited. You cannot initiate transfers.' });
+      throw new UnprocessableEntityException({
+        code: 'ACCOUNT_LIMITED',
+        message:
+          'Your account is currently limited. You cannot initiate transfers.',
+      });
     }
 
     // Security: Transaction PIN Validation
     // If the sender has set a PIN, they MUST provide the correct one to proceed.
     if (sender.transactionPin) {
       if (!dto.transactionPin) {
-        throw new ForbiddenException({ code: 'PIN_REQUIRED', message: 'A Transaction PIN is required to authorize this transfer. Please enter your 4-digit PIN.' });
+        throw new ForbiddenException({
+          code: 'PIN_REQUIRED',
+          message:
+            'A Transaction PIN is required to authorize this transfer. Please enter your 4-digit PIN.',
+        });
       }
-      const pinValid = await bcrypt.compare(dto.transactionPin, sender.transactionPin);
+      const pinValid = await bcrypt.compare(
+        dto.transactionPin,
+        sender.transactionPin,
+      );
       if (!pinValid) {
-        throw new ForbiddenException({ code: 'INVALID_PIN', message: 'Incorrect Transaction PIN. Transfer blocked.' });
+        throw new ForbiddenException({
+          code: 'INVALID_PIN',
+          message: 'Incorrect Transaction PIN. Transfer blocked.',
+        });
       }
     }
 
     // Resolve recipient by ID, email, or username (free-text entry support)
     const recipient = this.db.findUser(dto.recipientId);
     if (!recipient) {
-      throw new NotFoundException({ code: 'RECIPIENT_NOT_FOUND', message: 'Recipient not found. Please check the email, username, or ID entered.' });
+      throw new NotFoundException({
+        code: 'RECIPIENT_NOT_FOUND',
+        message:
+          'Recipient not found. Please check the email, username, or ID entered.',
+      });
     }
 
     if (sender.id === recipient.id) {
-      throw new UnprocessableEntityException({ code: 'SELF_TRANSFER', message: 'Cannot transfer funds to yourself.' });
+      throw new UnprocessableEntityException({
+        code: 'SELF_TRANSFER',
+        message: 'Cannot transfer funds to yourself.',
+      });
     }
 
     const currency = dto.currency;
@@ -156,7 +211,13 @@ export class PaymentsService {
     // Security: Fraud Detection — Daily Velocity Limit (rolling 24-hour window)
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const dailyTotal = Array.from(this.db.payments.values())
-      .filter((p) => p.senderId === sender.id && p.currency === currency && p.status === 'COMPLETED' && p.createdAt >= oneDayAgo)
+      .filter(
+        (p) =>
+          p.senderId === sender.id &&
+          p.currency === currency &&
+          p.status === 'COMPLETED' &&
+          p.createdAt >= oneDayAgo,
+      )
       .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
     if (dailyTotal + amount > DAILY_LIMIT) {
@@ -177,10 +238,14 @@ export class PaymentsService {
     }
 
     // Process transfer — update in-memory balances for both parties
-    sender.balance[currency] = parseFloat((senderCurrencyBalance - amount).toFixed(2));
+    sender.balance[currency] = parseFloat(
+      (senderCurrencyBalance - amount).toFixed(2),
+    );
 
     const recipientCurrencyBalance = recipient.balance[currency] ?? 0;
-    recipient.balance[currency] = parseFloat((recipientCurrencyBalance + amount).toFixed(2));
+    recipient.balance[currency] = parseFloat(
+      (recipientCurrencyBalance + amount).toFixed(2),
+    );
 
     const paymentId = uuidv4();
     const payment: Payment = {
@@ -198,7 +263,7 @@ export class PaymentsService {
     this.db.payments.set(paymentId, payment);
 
     this.auditService.appendLog(paymentId, 'TRANSFER_COMPLETED', sender.id);
-    
+
     // Secure Logging: log the transfer request with masked sensitive data
     const maskedPayload = maskSensitiveData({ ...dto, email: sender.email });
     this.logger.log(`TRANSFER_COMPLETED: ${JSON.stringify(maskedPayload)}`);
@@ -225,7 +290,10 @@ export class PaymentsService {
   getPayment(paymentId: string): Payment {
     const payment = this.db.payments.get(paymentId);
     if (!payment) {
-      throw new NotFoundException({ code: 'PAYMENT_NOT_FOUND', message: 'Payment not found' });
+      throw new NotFoundException({
+        code: 'PAYMENT_NOT_FOUND',
+        message: 'Payment not found',
+      });
     }
     return payment;
   }
@@ -233,7 +301,9 @@ export class PaymentsService {
   getPayments(page: number = 1, limit: number = 10, userId?: string) {
     let payments = Array.from(this.db.payments.values());
     if (userId) {
-      payments = payments.filter((p) => p.senderId === userId || p.recipientId === userId);
+      payments = payments.filter(
+        (p) => p.senderId === userId || p.recipientId === userId,
+      );
     }
 
     const total = payments.length;
@@ -256,20 +326,27 @@ export class PaymentsService {
   /** Generate a cryptographically secure 6-digit verification code */
   private generateVerificationCode(): string {
     // crypto.randomInt generates a secure random integer in [0, 10^6)
-    return randomInt(0, Math.pow(10, VERIFICATION_CODE_LENGTH)).toString().padStart(VERIFICATION_CODE_LENGTH, '0');
+    return randomInt(0, Math.pow(10, VERIFICATION_CODE_LENGTH))
+      .toString()
+      .padStart(VERIFICATION_CODE_LENGTH, '0');
   }
 
   /**
    * Security: Validate the 2FA verification code.
    * Throws if expired, wrong sender, max attempts exceeded, or incorrect code.
    */
-  private verifyCode(verificationId: string, verificationCode: string, senderId: string): void {
+  private verifyCode(
+    verificationId: string,
+    verificationCode: string,
+    senderId: string,
+  ): void {
     const session = this.verificationSessions.get(verificationId);
 
     if (!session) {
       throw new BadRequestException({
         code: 'VERIFICATION_SESSION_NOT_FOUND',
-        message: 'Verification session not found or expired. Please request a new verification code.',
+        message:
+          'Verification session not found or expired. Please request a new verification code.',
       });
     }
 
@@ -295,7 +372,8 @@ export class PaymentsService {
       this.verificationSessions.delete(verificationId);
       throw new ForbiddenException({
         code: 'MAX_ATTEMPTS_EXCEEDED',
-        message: 'Maximum verification attempts (3) exceeded. Please request a new verification code.',
+        message:
+          'Maximum verification attempts (3) exceeded. Please request a new verification code.',
         remainingAttempts: 0,
       } as any);
     }

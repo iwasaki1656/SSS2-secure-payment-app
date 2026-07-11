@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { JwtService } from '@nestjs/jwt';
 import { LoginDto } from './dto/login.dto';
@@ -29,9 +35,11 @@ export class AuthService {
     const MAX_ATTEMPTS = 5;
     const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
     if (user.lockoutUntil && new Date() < user.lockoutUntil) {
-      const remaining = Math.ceil((user.lockoutUntil.getTime() - Date.now()) / 60000);
+      const remaining = Math.ceil(
+        (user.lockoutUntil.getTime() - Date.now()) / 60000,
+      );
       throw new UnauthorizedException(
-        `Account temporarily locked due to too many failed attempts. Try again in ${remaining} minute(s).`
+        `Account temporarily locked due to too many failed attempts. Try again in ${remaining} minute(s).`,
       );
     }
 
@@ -43,11 +51,13 @@ export class AuthService {
       if (user.failedLoginAttempts >= MAX_ATTEMPTS) {
         user.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
         throw new UnauthorizedException(
-          `Too many failed attempts. Account locked for 15 minutes.`
+          `Too many failed attempts. Account locked for 15 minutes.`,
         );
       }
       const attemptsLeft = MAX_ATTEMPTS - user.failedLoginAttempts;
-      throw new UnauthorizedException(`Invalid email or password. ${attemptsLeft} attempt(s) remaining.`);
+      throw new UnauthorizedException(
+        `Invalid email or password. ${attemptsLeft} attempt(s) remaining.`,
+      );
     }
 
     // Security: Reject login for BANNED accounts.
@@ -57,7 +67,9 @@ export class AuthService {
 
     // Security: Prevent Admin accounts from logging in via the normal user login page
     if (user.role === 'ADMIN') {
-      throw new UnauthorizedException('Admin accounts cannot login via the user portal.');
+      throw new UnauthorizedException(
+        'Admin accounts cannot login via the user portal.',
+      );
     }
 
     // Successful login: reset the failed attempts counter
@@ -95,7 +107,9 @@ export class AuthService {
 
     // Security: Prevent normal users from logging in via the admin portal
     if (user.role !== 'ADMIN') {
-      throw new UnauthorizedException('Only admins can login via the admin portal.');
+      throw new UnauthorizedException(
+        'Only admins can login via the admin portal.',
+      );
     }
 
     const jti = uuidv4();
@@ -116,7 +130,8 @@ export class AuthService {
     if (isBlockedEmailDomain(dto.email)) {
       throw new BadRequestException({
         code: 'INVALID_EMAIL_DOMAIN',
-        message: 'This email domain is not accepted. Please use a real email address.',
+        message:
+          'This email domain is not accepted. Please use a real email address.',
       });
     }
 
@@ -139,11 +154,23 @@ export class AuthService {
     // Security: Hash the password with bcrypt (rounds=12) before storing
     const hashedPassword = await bcrypt.hash(dto.password, 12);
     // Security: Hash the transaction PIN with bcrypt if provided
-    const hashedPin = dto.transactionPin ? await bcrypt.hash(dto.transactionPin, 12) : undefined;
-    const newUser = this.db.createUser(dto.email, dto.username, hashedPassword, hashedPin);
+    const hashedPin = dto.transactionPin
+      ? await bcrypt.hash(dto.transactionPin, 12)
+      : undefined;
+    const newUser = this.db.createUser(
+      dto.email,
+      dto.username,
+      hashedPassword,
+      hashedPin,
+    );
 
     const jti = uuidv4();
-    const payload = { sub: newUser.id, email: newUser.email, role: newUser.role, jti };
+    const payload = {
+      sub: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      jti,
+    };
     const accessToken = await this.jwtService.signAsync(payload);
 
     const { password, transactionPin, ...userWithoutSensitive } = newUser;
@@ -158,27 +185,37 @@ export class AuthService {
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = this.db.users.get(userId);
     if (!user) {
-      throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'User not found.' });
+      throw new NotFoundException({
+        code: 'USER_NOT_FOUND',
+        message: 'User not found.',
+      });
     }
 
     // Check email uniqueness if changing
     if (dto.email && dto.email !== user.email) {
       if (this.db.getUserByEmail(dto.email)) {
-        throw new ConflictException({ code: 'EMAIL_TAKEN', message: 'This email is already in use.' });
+        throw new ConflictException({
+          code: 'EMAIL_TAKEN',
+          message: 'This email is already in use.',
+        });
       }
     }
 
     // Check username uniqueness if changing
     if (dto.username && dto.username !== user.username) {
       if (this.db.getUserByUsername(dto.username)) {
-        throw new ConflictException({ code: 'USERNAME_TAKEN', message: 'This username is already taken.' });
+        throw new ConflictException({
+          code: 'USERNAME_TAKEN',
+          message: 'This username is already taken.',
+        });
       }
     }
 
     const updates: Partial<typeof user> = {};
     if (dto.email) updates.email = dto.email;
     if (dto.username) updates.username = dto.username;
-    if (dto.profilePicture !== undefined) updates.profilePicture = dto.profilePicture;
+    if (dto.profilePicture !== undefined)
+      updates.profilePicture = dto.profilePicture;
 
     // Security: Hash the new password if provided
     if (dto.password) {
@@ -193,7 +230,9 @@ export class AuthService {
     if (!updatedUser) throw new NotFoundException();
 
     const { password, transactionPin, ...userWithoutSensitive } = updatedUser;
-    return { user: { ...userWithoutSensitive, transactionPinSet: !!transactionPin } };
+    return {
+      user: { ...userWithoutSensitive, transactionPinSet: !!transactionPin },
+    };
   }
 
   /** Security: True session invalidation — adds the token's jti to the blocklist */

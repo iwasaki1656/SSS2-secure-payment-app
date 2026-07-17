@@ -58,7 +58,7 @@ export class DatabaseService implements OnModuleInit {
       password: aliceHashedPassword,
       role: 'USER',
       status: 'ACTIVE',
-      balance: { USD: 5000, JPY: 100000, EUR: 4000 },
+      balance: { USD: 5000, JPY: 3000000, EUR: 4000 },
       failedLoginAttempts: 0,
     });
     this.users.set('bob_id', {

@@ -16,9 +16,22 @@ import { v4 as uuidv4 } from 'uuid';
 import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 
-// ─── Fraud Detection Limits ───────────────────────────────────────────────────
-const SINGLE_TX_LIMIT = 20000; // Max amount per single transaction
-const DAILY_LIMIT = 50000; // Max total transferred in a 24-hour window
+// ─── Fraud Detection Limits (per currency) ───────────────────────────────────
+// JPY has no decimal places and trades ~130:1 against USD, so its limits are
+// proportionally higher. EUR is approximately at parity with USD.
+const SINGLE_TX_LIMITS: Record<string, number> = {
+  USD: 20000,
+  EUR: 20000,
+  JPY: 2500000, // ~$20,000 USD equivalent
+};
+const DAILY_LIMITS: Record<string, number> = {
+  USD: 50000,
+  EUR: 50000,
+  JPY: 6500000, // ~$50,000 USD equivalent
+};
+// Fallback limit for any unsupported currency
+const DEFAULT_SINGLE_TX_LIMIT = 20000;
+const DEFAULT_DAILY_LIMIT = 50000;
 
 // ─── 2FA Verification Constants ───────────────────────────────────────────────
 const VERIFICATION_CODE_LENGTH = 6; // 6-digit numeric code
@@ -199,12 +212,14 @@ export class PaymentsService {
     }
 
     const currency = dto.currency;
+    const singleTxLimit = SINGLE_TX_LIMITS[currency] ?? DEFAULT_SINGLE_TX_LIMIT;
+    const dailyLimit = DAILY_LIMITS[currency] ?? DEFAULT_DAILY_LIMIT;
 
     // Security: Fraud Detection — Single Transaction Limit
-    if (amount > SINGLE_TX_LIMIT) {
+    if (amount > singleTxLimit) {
       throw new UnprocessableEntityException({
         code: 'FRAUD_SINGLE_TX_LIMIT',
-        message: `Transfer blocked: Single transaction limit is ${SINGLE_TX_LIMIT.toLocaleString()} ${currency}. For large transfers, please contact support.`,
+        message: `Transfer blocked: Single transaction limit is ${singleTxLimit.toLocaleString()} ${currency}. For large transfers, please contact support.`,
       });
     }
 
@@ -220,11 +235,11 @@ export class PaymentsService {
       )
       .reduce((sum, p) => sum + parseFloat(p.amount), 0);
 
-    if (dailyTotal + amount > DAILY_LIMIT) {
-      const remaining = Math.max(0, DAILY_LIMIT - dailyTotal);
+    if (dailyTotal + amount > dailyLimit) {
+      const remaining = Math.max(0, dailyLimit - dailyTotal);
       throw new UnprocessableEntityException({
         code: 'FRAUD_DAILY_LIMIT',
-        message: `Transfer blocked: Daily transfer limit of ${DAILY_LIMIT.toLocaleString()} ${currency} reached. Remaining allowance: ${remaining.toLocaleString()} ${currency}.`,
+        message: `Transfer blocked: Daily transfer limit of ${dailyLimit.toLocaleString()} ${currency} reached. Remaining allowance: ${remaining.toLocaleString()} ${currency}.`,
       });
     }
 

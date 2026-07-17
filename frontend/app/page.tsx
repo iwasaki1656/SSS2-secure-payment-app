@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 // Pre-seeded users in our Fintech prototype system (IDs must match backend database.service.ts)
 const PRESEEDED_USERS = [
-  { id: 'alice_id', email: 'alice@example.com', username: 'alice_vance', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 100000, EUR: 4000 } },
+  { id: 'alice_id', email: 'alice@example.com', username: 'alice_vance', name: 'Alice Vance', initialBalance: { USD: 5000, JPY: 3000000, EUR: 4000 } },
   { id: 'bob_id', email: 'bob@example.com', username: 'bob_vance', name: 'Bob Vance', initialBalance: { USD: 1500, JPY: 50000, EUR: 1200 } },
 ];
 
@@ -19,7 +19,7 @@ function validatePassword(pw: string): string | null {
 }
 
 // Rudimentary fake domain check (mirrors backend blocklist)
-const BLOCKED_DOMAINS = ['mailinator.com', 'guerrillamail.com', 'tempmail.com', 'yopmail.com', 'trashmail.com', 'fakeinbox.com', 'maildrop.cc', 'discard.email', 'spambox.us'];
+const BLOCKED_DOMAINS = ['mailinator.com', 'guerrillamail.com', 'tempmail.com', 'yopmail.com', 'trashmail.com', 'fakeinbox.com', 'maildrop.cc', 'discard.email', 'spambox.us', 'fakedomain.com'];
 function isFakeDomain(email: string): boolean {
   const domain = email.split('@')[1]?.toLowerCase();
   return domain ? BLOCKED_DOMAINS.includes(domain) : false;
@@ -1235,24 +1235,27 @@ export default function Dashboard() {
                         />
                       </div>
 
-                      {/* Security: Transaction PIN — only shown if user has set one */}
-                      {activeUser?.transactionPinSet && (
-                        <div>
-                          <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>
-                            🔐 Transaction PIN <span className="text-rose-400">*required</span>
-                          </label>
-                          <input
-                            id="transfer-pin-input"
-                            type="password"
-                            inputMode="numeric"
-                            maxLength={4}
-                            value={transferPin}
-                            onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                            placeholder="Enter your 4-digit PIN"
-                            className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono tracking-widest ${t.input}`}
-                          />
-                        </div>
-                      )}
+                      {/* Security: Transaction PIN — always shown; required if user has set one */}
+                      <div>
+                        <label className={`block text-xs font-mono mb-1 ${t.labelMuted}`}>
+                          🔐 Transaction PIN{' '}
+                          {activeUser?.transactionPinSet
+                            ? <span className="text-rose-400">*required</span>
+                            : <span className={t.textMuted}>(optional)</span>
+                          }
+                        </label>
+                        <input
+                          id="transfer-pin-input"
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={transferPin}
+                          onChange={(e) => setTransferPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                          placeholder="Enter your 4-digit PIN"
+                          className={`w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-cyan-500 font-mono tracking-widest ${t.input}`}
+                        />
+                      </div>
+
 
                       {/* Idempotency Key Section */}
                       <div className={`p-3 rounded-xl border space-y-2 ${t.idempotency}`}>

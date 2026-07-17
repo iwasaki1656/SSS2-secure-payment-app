@@ -38,20 +38,25 @@ export async function PUT(req: Request) {
 
     const contentType = res.headers.get('content-type');
     const isJson = contentType && contentType.includes('application/json');
-    const data = isJson ? await res.json() : await res.text();
+    const rawData = isJson ? await res.json() : await res.text();
 
     if (!res.ok) {
+      // Backend wraps errors via TransformInterceptor — unwrap if needed
+      const errPayload = rawData?.data || rawData;
       const message =
-        typeof data === 'object'
-          ? (Array.isArray(data?.message) ? data.message.join('. ') : data?.message)
-          : data;
+        typeof errPayload === 'object'
+          ? (Array.isArray(errPayload?.message) ? errPayload.message.join('. ') : errPayload?.message)
+          : errPayload;
       return NextResponse.json(
-        { success: false, error: { code: data?.error || 'UPDATE_FAILED', message: message || 'Profile update failed' } },
+        { success: false, error: { code: errPayload?.error || 'UPDATE_FAILED', message: message || 'Profile update failed' } },
         { status: res.status }
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    // Backend response is already wrapped by TransformInterceptor as { success, data: { user } }
+    // Unwrap the inner layer so the frontend receives: { success: true, data: { user } }
+    const innerData = rawData?.data ?? rawData;
+    return NextResponse.json({ success: true, data: innerData });
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: { code: 'BFF_ERROR', message: error.message } },

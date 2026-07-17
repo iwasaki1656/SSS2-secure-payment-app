@@ -36,6 +36,7 @@ const BLOCKED_DOMAINS = [
   'spambox.us',
   'throwam.com',
   'mintemail.com',
+  'fakedomain.com',
 ];
 
 export function isBlockedEmailDomain(email: string): boolean {
